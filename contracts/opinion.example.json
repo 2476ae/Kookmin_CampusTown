@@ -1,0 +1,99 @@
+{
+  "ticker": "AAPL",
+  "asof": "2026-09-20T14:22:00+09:00",
+  "model": "claude-opus-5",
+
+  "headline": "돈은 아주 잘 버는 회사입니다. 다만 지금 가격이 비쌉니다.",
+
+  "sections": [
+    {
+      "id": "overall",
+      "title": "한 줄로 말하면",
+      "sentences": [
+        {
+          "text": "Apple은 같은 업종 58개 회사 중 26위입니다.",
+          "evidence": ["score.overall"]
+        },
+        {
+          "text": "수익성은 업종 최상위권인데 밸류에이션 점수가 낮아서 중간 순위가 됐습니다.",
+          "evidence": ["profitability.operating_margin", "valuation.per"]
+        }
+      ]
+    },
+    {
+      "id": "strength",
+      "title": "잘하는 것",
+      "sentences": [
+        {
+          "text": "영업이익률이 31.2%입니다. 100원어치를 팔면 31원이 이익으로 남는다는 뜻입니다.",
+          "evidence": ["profitability.operating_margin"],
+          "terms": ["영업이익률"]
+        },
+        {
+          "text": "같은 업종 중앙값이 12.1%이니, 경쟁사보다 두 배 넘게 남기고 있습니다.",
+          "evidence": ["profitability.operating_margin"]
+        },
+        {
+          "text": "벌었다고 장부에 적은 돈보다 실제로 통장에 들어온 현금이 더 많습니다(1.24배).",
+          "evidence": ["stability.cashflow_quality"],
+          "terms": ["영업현금흐름"]
+        }
+      ]
+    },
+    {
+      "id": "concern",
+      "title": "걸리는 것",
+      "sentences": [
+        {
+          "text": "PER이 34.8배로 업종 중앙값 19.4배보다 훨씬 높습니다.",
+          "evidence": ["valuation.per"],
+          "terms": ["PER"]
+        },
+        {
+          "text": "좋은 회사라는 데는 시장도 동의하고 있고, 그 기대가 이미 가격에 들어가 있다는 뜻입니다.",
+          "evidence": ["valuation.per", "valuation.pbr"]
+        },
+        {
+          "text": "주가가 112일째 상승 정렬 상태입니다. 이미 오래 오른 구간이라는 신호입니다.",
+          "evidence": ["flag.ma_late"]
+        }
+      ]
+    },
+    {
+      "id": "context",
+      "title": "지금 시장은",
+      "sentences": [
+        {
+          "text": "기준금리가 4.25%로 여전히 높습니다. 금리가 높으면 비싼 성장주가 불리한 편입니다.",
+          "evidence": ["macro.fed_funds"],
+          "terms": ["기준금리"]
+        }
+      ]
+    }
+  ],
+
+  "glossary": [
+    {
+      "term": "영업이익률",
+      "plain": "물건을 팔아서 남긴 이익이 매출의 몇 %인지. 높을수록 장사를 잘하는 겁니다.",
+      "formula": "영업이익 ÷ 매출"
+    },
+    {
+      "term": "PER",
+      "plain": "지금 주가가 이 회사 1년 이익의 몇 배인지. 34배면 지금 이익이 34년 쌓여야 주가만큼 된다는 뜻입니다. 낮으면 싸다고 봅니다.",
+      "formula": "시가총액 ÷ 순이익"
+    },
+    {
+      "term": "영업현금흐름",
+      "plain": "장부상 이익 말고, 실제로 통장에 들어온 현금. 이익보다 적으면 못 받은 외상이 많다는 신호입니다.",
+      "formula": null
+    },
+    {
+      "term": "기준금리",
+      "plain": "중앙은행이 정하는 돈의 값. 높으면 은행 이자가 좋아져서 주식의 매력이 상대적으로 줄어듭니다.",
+      "formula": null
+    }
+  ],
+
+  "disclaimer": "정보 제공 목적이며 투자 자문이 아닙니다. 투자 판단과 그 결과의 책임은 이용자에게 있습니다."
+}
