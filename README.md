@@ -192,6 +192,27 @@ SIC 2자리 → ≥ 30 ? 사용
 **문장마다 근거 ID를 붙이는 것**이 이 설계의 전부입니다.
 없으면 좌측 사이드바는 숫자 덤프가 되고, 있으면 "이 문장 왜?" → 클릭 → 해당 수치로 점프가 됩니다.
 
+## 돌려보기
+
+```bash
+python scoring/fake_db.py       # 가짜 DB 생성 (230종목, 예외 케이스 포함)
+python scoring/test_engine.py   # 점수 엔진 검사 16개
+python llm/test_opinion.py      # 의견 생성 + API 검사 10개
+python api/server.py            # http://localhost:8000
+```
+
+```
+GET /api/score?ticker=35010     단순 JSON · 즉시 (실측 0.2ms)
+GET /api/opinion?ticker=35010   SSE · score -> status -> delta -> opinion -> done
+```
+
+API 키 없이도 전부 돌아갑니다 (의견은 목 데이터). 실제 LLM을 쓰려면:
+
+```bash
+export ANTHROPIC_API_KEY=...    # Windows PowerShell: $env:ANTHROPIC_API_KEY="..."
+pip install anthropic
+```
+
 ## 같이 만드는 법
 
 - **[TASKS.md](TASKS.md)** — 3명 작업 분담. 각자 서로 기다리지 않고 돌릴 수 있게 쪼개놨습니다.

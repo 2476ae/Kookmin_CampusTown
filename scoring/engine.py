@@ -155,6 +155,12 @@ class Engine:
                 "WHERE asof = (SELECT max(asof) FROM price_snapshot)"):
             self.price[r["ticker"]] = dict(r)
 
+        # 거시도 여기서 올립니다. 요청 시점에 conn 을 건드리면 스레드가 바뀔 때 터집니다
+        # (sqlite3 연결은 생성한 스레드에서만 쓸 수 있습니다).
+        self.macro = {r["series_id"]: r["value"] for r in self.conn.execute(
+            "SELECT series_id, value FROM macro "
+            "WHERE date = (SELECT max(date) FROM macro)")}
+
         # 전 종목 × 전 지표를 한 번에 계산해둡니다. 백분위는 이 행렬 위에서 냅니다.
         self.values = {}
         for cik, c in self.company.items():

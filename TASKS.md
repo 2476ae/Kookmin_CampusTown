@@ -86,7 +86,21 @@ SELECT value FROM annual_fact WHERE cik='0000021344' AND metric='liabilities'; -
 | `scoring/engine.py` | 지표 8개 · 백분위 · SIC 폴백 사다리 · S5/S6 처리 |
 | `scoring/test_engine.py` | 프레임워크 없는 assert 검사 16개 |
 
-**남은 것: 5번 LLM 오케스트레이터, 6번 API 엔드포인트.**
+5~6번도 완료. `python llm/test_opinion.py` 로 10개 검사 통과.
+
+| 파일 | 내용 |
+|---|---|
+| `llm/opinion.py` | 의견 생성. 구조화 출력 + 근거 ID 위조 방어. 키 없으면 목 모드 |
+| `api/server.py` | stdlib 서버. `/api/score`(즉시) + `/api/opinion`(SSE) |
+| `llm/test_opinion.py` | 검사 10개 |
+
+**tool calling을 안 씁니다.** TASKS.md 원안에 "tool calling"이라고 썼지만,
+LLM이 필요로 하는 데이터(점수·거시·가격)는 매번 전부 필요합니다. 탐색할 게 없으니
+LLM이 무엇을 가져올지 결정할 이유가 없습니다. 셋을 미리 넣고 호출 한 번으로 끝냅니다.
+S7 꼬리질문에서 다른 종목을 묻게 되면 그때 툴이 필요해집니다.
+
+**⚠️ 실제 LLM 호출은 아직 아무도 안 돌려봤습니다** (API 키 없음).
+키를 넣고 한 번 돌려보는 게 남은 유일한 미검증 구간입니다.
 
 구현하면서 계약에 실제로 추가된 것 (담당 ③는 다시 받아가세요):
 - `fiscal_year` — 재무가 몇 년도 기준인지
