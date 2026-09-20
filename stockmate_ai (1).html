@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="ko" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StockMate - 초보자를 위한 게이미피케이션 주식투자 AI 가이드</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Confetti particle library for level-up celebrations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <style>
+    body {
+      font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+      background-color: #f8fafc;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.45); }
+      70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+    }
+    .highlight-pulse {
+      animation: pulse-ring 1.8s infinite;
+      border-color: #2563eb !important;
+      background-color: #eff6ff !important;
+    }
+    .fade-in {
+      animation: fadeIn 0.25s ease-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .exp-bar-glow {
+      box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
+    }
+  </style>
+</head>
+<body class="h-full overflow-hidden text-slate-800 antialiased flex flex-col">
+
+  <!-- TOP GLOBAL NAV -->
+  <header class="h-14 bg-white border-b border-slate-200 px-4 sm:px-5 flex items-center justify-between flex-shrink-0 z-20">
+    <div class="flex items-center gap-3">
+      <div onclick="resetToInitialChat()" class="cursor-pointer flex items-center gap-2 group">
+        <div class="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-sm shadow-blue-200 group-hover:bg-blue-700 transition-colors">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h1 class="text-base font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
+            StockMate <span class="text-xs bg-blue-50 text-blue-600 font-semibold px-2 py-0.5 rounded-full border border-blue-100">초보자 AI 가이드</span>
+          </h1>
+        </div>
+      </div>
+    </div>
+
+    <!-- 종목 빠른 전환 탭 -->
+    <div id="top-stock-tabs" class="hidden md:flex items-center bg-slate-100 p-1 rounded-xl gap-1">
+      <button onclick="selectStockAndAnalyze('AAPL')" id="tab-AAPL" class="stock-tab px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition-all">🍎 애플</button>
+      <button onclick="selectStockAndAnalyze('005930')" id="tab-005930" class="stock-tab px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition-all">📱 삼성전자</button>
+      <button onclick="selectStockAndAnalyze('NVDA')" id="tab-NVDA" class="stock-tab px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition-all">⚡ 엔비디아</button>
+      <button onclick="selectStockAndAnalyze('TSLA')" id="tab-TSLA" class="stock-tab px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 transition-all">🚗 테슬라</button>
+    </div>
+
+    <!-- 오른쪽 게이미피케이션 레벨 & EXP 표시 위젯 -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <button onclick="openQuestModal()" title="오늘의 미션 & 레벨 보기" class="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 hover:border-blue-300 px-3 py-1.5 rounded-xl transition-all shadow-xs group">
+        <span id="top-level-icon" class="text-lg">🐣</span>
+        <div class="text-left">
+          <div class="flex items-center gap-1.5">
+            <span id="top-level-title" class="text-xs font-extrabold text-blue-900">Lv.1 주린이 병아리</span>
+            <span id="top-exp-text" class="text-[10px] text-blue-600 font-semibold">0/100 EXP</span>
+          </div>
+          <!-- EXP Progress bar -->
+          <div class="w-24 sm:w-28 bg-slate-200 h-1.5 rounded-full overflow-hidden mt-0.5">
+            <div id="top-exp-bar" class="bg-blue-600 h-full rounded-full transition-all duration-500 exp-bar-glow" style="width: 0%;"></div>
+          </div>
+        </div>
+      </button>
+
+      <button onclick="resetToInitialChat()" id="btn-new-chat-top" title="초기 챗봇 화면으로" class="hidden sm:flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-xl transition-all border border-slate-200">
+        <i data-lucide="message-square-plus" class="w-3.5 h-3.5 text-blue-600"></i>
+        <span>새 질문</span>
+      </button>
+
+      <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
+        <i data-lucide="user" class="w-4 h-4"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WRAPPER -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- 1. LEFT SIDEBAR -->
+    <aside class="w-56 bg-white border-r border-slate-200 flex flex-col justify-between p-3 flex-shrink-0">
+      <div class="space-y-1">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-1">메뉴</p>
+        
+        <button onclick="resetToInitialChat()" id="menu-btn-home" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 transition-colors">
+          <i data-lucide="bot" class="w-4 h-4 text-blue-600"></i> AI 투자 챗봇 (홈)
+        </button>
+
+        <button onclick="ensureAnalysisView()" id="menu-btn-analysis" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+          <i data-lucide="layout-dashboard" class="w-4 h-4 text-slate-400"></i> 종목 종합 분석
+        </button>
+
+        <button onclick="openSimulationModal()" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-purple-700 bg-purple-50/70 hover:bg-purple-100/70 border border-purple-100 transition-colors">
+          <span class="flex items-center gap-2">
+            <i data-lucide="gamepad-2" class="w-4 h-4 text-purple-600"></i> 위기 돌파 시뮬레이션
+          </span>
+          <span class="text-[10px] bg-purple-200 text-purple-800 font-bold px-1.5 py-0.5 rounded-full">+40 EXP</span>
+        </button>
+
+        <button onclick="openQuestModal()" id="menu-btn-quest" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+          <span class="flex items-center gap-2">
+            <i data-lucide="trophy" class="w-4 h-4 text-amber-500"></i> 레벨 & 퀘스트
+          </span>
+          <span id="quest-pending-badge" class="w-2 h-2 rounded-full bg-amber-500"></span>
+        </button>
+
+        <button onclick="openGlossaryModal()" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+          <i data-lucide="book-open" class="w-4 h-4 text-slate-400"></i> 초보 투자 사전
+        </button>
+      </div>
+
+      <!-- 사이드바 하단 게이미피케이션 미니 퀘스트 알림 위젯 -->
+      <div onclick="openQuestModal()" class="cursor-pointer bg-gradient-to-br from-blue-50 to-slate-50 rounded-xl p-3 border border-blue-100/80 hover:border-blue-300 transition-all">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+            <i data-lucide="award" class="w-3.5 h-3.5 text-blue-600"></i> 오늘 미션 현황
+          </span>
+          <span id="quest-ratio-badge" class="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.2 rounded-full">0/3</span>
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed">
+          미션을 달성하고 주린이에서 버핏의 후계자로 레벨업하세요!
+        </p>
+      </div>
+    </aside>
+
+    <!-- 2-A. INITIAL IDLE STATE: 챗봇 전용 중앙 집중형 인터페이스 -->
+    <div id="initial-chat-view" class="flex-1 flex flex-col items-center justify-between p-6 overflow-y-auto bg-slate-50/70 fade-in">
+      <div class="w-full max-w-2xl mx-auto flex-1 flex flex-col justify-center items-center text-center my-auto">
+        
+        <!-- 환영 아이콘 및 헤딩 -->
+        <div class="relative mb-3">
+          <div class="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
+            <i data-lucide="bot" class="w-8 h-8"></i>
+          </div>
+          <span id="welcome-badge-icon" class="absolute -bottom-1 -right-1 text-xl">🐣</span>
+        </div>
+
+        <h2 class="text-2xl font-bold text-slate-900 mb-1 tracking-tight">
+          어떤 주식이 궁금하신가요?
+        </h2>
+        <p class="text-sm text-slate-500 max-w-md mb-5 leading-relaxed">
+          어려운 차트 대신 직관적인 비유와 3단 분석 리포트를 제공합니다. 질문만 해도 경험치 <span class="text-blue-600 font-bold">+20 EXP</span> 획득!
+        </p>
+
+        <!-- 페르소나 선택 탭 (초기 화면) -->
+        <div class="bg-slate-200/80 p-1 rounded-xl flex items-center gap-1 mb-5 max-w-sm w-full">
+          <button onclick="setGlobalPersona('friendly')" id="init-persona-friendly" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-bold bg-white text-blue-600 shadow-xs flex items-center justify-center gap-1.5 transition-all">
+            <span>🧑‍🏫</span> 친절 튜터
+          </button>
+          <button onclick="setGlobalPersona('buffett')" id="init-persona-buffett" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 transition-all">
+            <span>🧓</span> 팩폭 버핏
+          </button>
+          <button onclick="setGlobalPersona('analyst')" id="init-persona-analyst" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 transition-all">
+            <span>🤖</span> 극T 분석관
+          </button>
+        </div>
+
+        <!-- 메인 검색 및 질문 입력창 -->
+        <div class="w-full bg-white rounded-2xl border border-slate-200 p-2 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all mb-4">
+          <form onsubmit="handleInitialSubmit(event)" class="relative flex items-center">
+            <i data-lucide="sparkles" class="w-5 h-5 text-blue-500 ml-3 mr-2 flex-shrink-0"></i>
+            <input 
+              type="text" 
+              id="initial-user-input" 
+              placeholder="궁금한 종목을 물어보세요 (예: '애플 지금 살까?', '삼성전자 어때?')" 
+              class="w-full text-sm bg-transparent border-none py-2.5 focus:outline-none text-slate-800 placeholder-slate-400"
+              autocomplete="off"
+            >
+            <button type="submit" class="w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center justify-center transition-colors flex-shrink-0 mr-1 shadow-xs">
+              <i data-lucide="arrow-up" class="w-4 h-4"></i>
+            </button>
+          </form>
+        </div>
+
+        <!-- 빠른 시작 추천 질문 칩 & 위기 시뮬레이션 바로가기 배너 -->
+        <div class="w-full text-left space-y-2">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="flame" class="w-3.5 h-3.5 text-amber-500"></i> 질문 던지고 레벨업하기:
+            </p>
+            <button onclick="openSimulationModal()" class="text-xs text-purple-600 font-bold hover:underline flex items-center gap-1">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-purple-600"></i> 돌발 시뮬레이션 도전 (+40 EXP)
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button onclick="triggerSampleQuestion('AAPL', '애플 어때?')" class="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl text-left transition-all group flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-base">🍎</span>
+                <span class="text-xs font-bold text-slate-700 group-hover:text-blue-600">애플 어때?</span>
+              </div>
+              <span class="text-[11px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">+20 EXP</span>
+            </button>
+
+            <button onclick="triggerSampleQuestion('005930', '삼성전자 지금 살까?')" class="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl text-left transition-all group flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-base">📱</span>
+                <span class="text-xs font-bold text-slate-700 group-hover:text-blue-600">삼성전자 지금 살까?</span>
+              </div>
+              <span class="text-[11px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">+20 EXP</span>
+            </button>
+
+            <button onclick="triggerSampleQuestion('NVDA', '엔비디아 전망은?')" class="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl text-left transition-all group flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-base">⚡</span>
+                <span class="text-xs font-bold text-slate-700 group-hover:text-blue-600">엔비디아 전망은?</span>
+              </div>
+              <span class="text-[11px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">+20 EXP</span>
+            </button>
+
+            <button onclick="triggerSampleQuestion('TSLA', '테슬라 분석해줘')" class="p-3 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-xl text-left transition-all group flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-base">🚗</span>
+                <span class="text-xs font-bold text-slate-700 group-hover:text-blue-600">테슬라 분석해줘</span>
+              </div>
+              <span class="text-[11px] text-blue-600 font-semibold bg-blue-50 px-2 py-0.5 rounded-full">+20 EXP</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 초기 화면 하단 팁 바 -->
+      <div class="text-center text-xs text-slate-400 py-2">
+        💡 질문을 시작하면 즉시 <strong>근거 드릴다운 & 종합 평가</strong> 리포트 패널로 전환됩니다.
+      </div>
+    </div>
+
+    <!-- 2-B. ANALYSIS STATE: 3-COLUMN LAYOUT -->
+    <main id="analysis-view" class="hidden flex-1 grid grid-cols-12 gap-3 p-3 overflow-hidden bg-slate-100/60 fade-in">
+
+      <!-- COLUMN 1: 근거 드릴다운 -->
+      <section class="col-span-12 lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-blue-600"></div>
+            <h2 class="text-sm font-bold text-slate-800">근거 드릴다운</h2>
+          </div>
+          <span class="text-[11px] text-blue-600 font-medium">클릭 시 원리 학습 (+20 EXP)</span>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-3.5 space-y-3 custom-scroll">
+          
+          <!-- 근거 1: 영업이익률 -->
+          <div onclick="clickEvidenceCard('card-operating-profit')" id="card-operating-profit" class="cursor-pointer p-3.5 rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:border-blue-400 hover:shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <i data-lucide="trending-up" class="w-3.5 h-3.5 text-blue-600"></i> 영업이익률
+              </span>
+              <span id="label-op-percent" class="text-sm font-extrabold text-blue-600">88%</span>
+            </div>
+            
+            <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mb-2">
+              <div id="bar-operating-profit" class="bg-blue-600 h-full rounded-full transition-all duration-700" style="width: 88%;"></div>
+            </div>
+
+            <div class="bg-blue-50/70 border border-blue-100 rounded-lg p-2.5">
+              <p id="op-explanation" class="text-[11px] text-blue-900 font-medium leading-relaxed">
+                💡 <strong class="font-bold">초보 해설:</strong> 물건을 팔아서 원가와 경비를 뺀 뒤 손에 쥐는 진짜 마진입니다. 동종업계 상위 12% 수준으로 압도적인 수익성을 자랑합니다.
+              </p>
+            </div>
+          </div>
+
+          <!-- 근거 2: PER -->
+          <div onclick="clickEvidenceCard('card-per')" id="card-per" class="cursor-pointer p-3.5 rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:border-amber-400 hover:shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <i data-lucide="scale" class="w-3.5 h-3.5 text-amber-500"></i> PER (주가수익비율)
+              </span>
+              <span id="label-per-percent" class="text-sm font-extrabold text-amber-600">22%</span>
+            </div>
+            
+            <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mb-2">
+              <div id="bar-per" class="bg-amber-500 h-full rounded-full transition-all duration-700" style="width: 22%;"></div>
+            </div>
+
+            <div class="bg-amber-50/70 border border-amber-100 rounded-lg p-2.5">
+              <p id="per-explanation" class="text-[11px] text-amber-900 font-medium leading-relaxed">
+                ⚠️ <strong class="font-bold">초보 해설:</strong> 회사가 버는 이익 대비 주가가 얼마나 비싼지 나타냅니다. 22%로 낮게 평가된 수치는 "현재 주가가 이익에 비해 상당히 비싸다"는 경고 신호입니다.
+              </p>
+            </div>
+          </div>
+
+          <!-- 근거 3: 업종 분포도 -->
+          <div id="card-industry-dist" class="p-3.5 rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:border-slate-300">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-indigo-600"></i> [업종 분포]
+              </span>
+              <span id="industry-comp-text" class="text-[11px] text-slate-400">동종 58개사 비교</span>
+            </div>
+            
+            <div class="w-full bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col items-center justify-center">
+              <canvas id="distCanvas" width="280" height="90" class="w-full"></canvas>
+              <div class="w-full flex justify-between text-[10px] text-slate-400 mt-1 px-1">
+                <span>저평가 (매력)</span>
+                <span class="text-blue-600 font-semibold">● 현재 위치</span>
+                <span>고평가 (주의)</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- COLUMN 2: 종합의견 (비주얼 & 게이지) -->
+      <section class="col-span-12 lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+            <h2 class="text-sm font-bold text-slate-800">종합의견</h2>
+          </div>
+          <span id="rank-badge" class="text-xs font-bold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full">
+            58개 중 26위
+          </span>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-between custom-scroll space-y-4">
+          
+          <!-- 기업 성향 캐릭터 뱃지 -->
+          <div class="w-full flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2">
+            <div class="flex items-center gap-2">
+              <span id="stock-avatar" class="text-xl">👑</span>
+              <div>
+                <p id="stock-name-title" class="text-xs font-bold text-slate-800">애플 (AAPL)</p>
+                <p id="stock-tagline" class="text-[11px] text-slate-500 font-medium">콧대 높은 명품 맛집</p>
+              </div>
+            </div>
+            <span id="stock-verdict-pill" class="text-[11px] font-bold text-amber-700 bg-amber-100/80 px-2.5 py-1 rounded-lg">
+              신중한 관망
+            </span>
+          </div>
+
+          <!-- 투자 적정 온도계 & 매력도 지수 박스 -->
+          <div class="w-full bg-gradient-to-b from-slate-50 to-white border border-slate-200 rounded-2xl p-4 flex flex-col items-center">
+            
+            <div class="relative px-6 py-2 border-2 border-slate-800 rounded-2xl bg-white shadow-xs mb-3">
+              <span class="absolute -top-2.5 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400">매력 지수</span>
+              <span id="score-display" class="text-4xl font-black text-slate-900 tracking-tight">56</span>
+              <span class="text-xs font-bold text-slate-400 ml-0.5">/ 100</span>
+            </div>
+
+            <!-- 직관적 온도계 게이지 바 -->
+            <div class="w-full max-w-xs space-y-1.5">
+              <div class="flex justify-between text-[11px] font-bold">
+                <span class="text-blue-600">❄️ 차가운 세일 (저평가)</span>
+                <span id="temp-label" class="text-amber-600 font-extrabold">56°C 미지근</span>
+                <span class="text-rose-600">🔥 뜨거운 과열</span>
+              </div>
+              <div class="relative w-full h-3.5 bg-gradient-to-r from-blue-400 via-amber-300 to-rose-500 rounded-full shadow-inner">
+                <div id="temp-indicator" class="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-slate-900 rounded-full shadow-md transition-all duration-700 flex items-center justify-center -ml-2.5" style="left: 56%;">
+                  <div class="w-1.5 h-1.5 bg-slate-900 rounded-full"></div>
+                </div>
+              </div>
+              <p class="text-[10px] text-slate-400 text-center">점수가 50에 가까울수록 적정가, 높을수록 과열 구간입니다.</p>
+            </div>
+          </div>
+
+          <!-- 직관적인 실감 비유 문장 카드 -->
+          <div class="w-full space-y-2.5">
+            <p class="text-[11px] font-bold text-slate-400 flex items-center gap-1">
+              <i data-lucide="mouse-pointer-click" class="w-3 h-3 text-blue-600"></i> 문장을 누르면 왼쪽 근거 카드로 점프합니다
+            </p>
+
+            <button onclick="jumpToEvidence('card-operating-profit')" class="w-full text-left p-3.5 rounded-xl border border-blue-200 bg-blue-50/40 hover:bg-blue-50 hover:border-blue-300 transition-all flex items-center justify-between group">
+              <div class="space-y-0.5">
+                <div class="flex items-center gap-1.5">
+                  <span id="phrase-tag-1" class="text-xs font-bold text-blue-700">수익성 극상</span>
+                  <span id="phrase-sub-1" class="text-[10px] text-slate-400">· 영업이익률 88%</span>
+                </div>
+                <p id="phrase-main-1" class="text-xs font-bold text-slate-800 group-hover:text-blue-700 transition-colors">
+                  "돈은 아주 잘 버는 알짜 회사입니다."
+                </p>
+                <p id="phrase-desc-1" class="text-[11px] text-slate-500">100원 팔아서 30원 이상 남기는 강력한 현금 창출력</p>
+              </div>
+              <i data-lucide="arrow-left" class="w-4 h-4 text-blue-500 group-hover:-translate-x-1 transition-transform flex-shrink-0"></i>
+            </button>
+
+            <button onclick="jumpToEvidence('card-per')" class="w-full text-left p-3.5 rounded-xl border border-amber-200 bg-amber-50/40 hover:bg-amber-50 hover:border-amber-300 transition-all flex items-center justify-between group">
+              <div class="space-y-0.5">
+                <div class="flex items-center gap-1.5">
+                  <span id="phrase-tag-2" class="text-xs font-bold text-amber-700">가격 부담 경보</span>
+                  <span id="phrase-sub-2" class="text-[10px] text-slate-400">· PER 22% 백분위</span>
+                </div>
+                <p id="phrase-main-2" class="text-xs font-bold text-slate-800 group-hover:text-amber-700 transition-colors">
+                  "다만 지금 주가에 거품이 껴서 비쌉니다."
+                </p>
+                <p id="phrase-desc-2" class="text-[11px] text-slate-500">원금 회수에 34년 걸리는 높은 권리금이 붙어있음</p>
+              </div>
+              <i data-lucide="arrow-left" class="w-4 h-4 text-amber-500 group-hover:-translate-x-1 transition-transform flex-shrink-0"></i>
+            </button>
+          </div>
+
+          <!-- 한 줄 결론 요약 배너 -->
+          <div class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+            <p id="final-verdict-summary" class="text-xs text-slate-700 font-semibold">
+              🎯 <span class="text-blue-600 font-bold">초보 투자 가이드:</span> 지금 한 번에 다 사지 말고, 쪼개서 매수(분할 매수)하는 것을 권장합니다.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- COLUMN 3: LLM 챗봇 & 페르소나 상담 -->
+      <section class="col-span-12 lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
+        
+        <!-- 페르소나 선택 헤더 -->
+        <div class="px-3.5 py-2.5 border-b border-slate-100 bg-slate-50/70 flex-shrink-0">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-1.5">
+              <i data-lucide="bot" class="w-4 h-4 text-blue-600"></i>
+              <h2 class="text-xs font-bold text-slate-800">챗봇 상담 모드</h2>
+            </div>
+            <button onclick="resetToInitialChat()" class="text-[11px] text-blue-600 hover:underline flex items-center gap-0.5">
+              <i data-lucide="rotate-ccw" class="w-3 h-3"></i> 처음으로
+            </button>
+          </div>
+
+          <!-- 페르소나 선택 탭 (3가지 성격) -->
+          <div class="grid grid-cols-3 gap-1 bg-slate-200/70 p-1 rounded-xl">
+            <button onclick="setGlobalPersona('friendly')" id="persona-btn-friendly" class="persona-tab py-1.5 px-2 rounded-lg text-[11px] font-bold bg-white text-blue-600 shadow-xs flex items-center justify-center gap-1 transition-all">
+              <span>🧑‍🏫</span> 친절 튜터
+            </button>
+            <button onclick="setGlobalPersona('buffett')" id="persona-btn-buffett" class="persona-tab py-1.5 px-2 rounded-lg text-[11px] font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1 transition-all">
+              <span>🧓</span> 팩폭 버핏
+            </button>
+            <button onclick="setGlobalPersona('analyst')" id="persona-btn-analyst" class="persona-tab py-1.5 px-2 rounded-lg text-[11px] font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1 transition-all">
+              <span>🤖</span> 극T 분석관
+            </button>
+          </div>
+        </div>
+
+        <!-- 페르소나 프로필 알림바 -->
+        <div id="persona-banner" class="bg-blue-50/80 px-3.5 py-1.5 border-b border-blue-100 flex items-center justify-between text-[11px] text-blue-800">
+          <span class="font-semibold flex items-center gap-1">
+            <span id="persona-icon">🧑‍🏫</span> <span id="persona-desc">어려운 주식 용어를 일상 비유로 쉽게 설명해 드려요.</span>
+          </span>
+        </div>
+
+        <!-- 메시지 리스트 영역 -->
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-3.5 space-y-3 custom-scroll text-xs">
+          <!-- 동적 렌더링 -->
+        </div>
+
+        <!-- 꼬리 질문 칩 추천 -->
+        <div class="px-3 pt-2 pb-1 border-t border-slate-100 bg-white">
+          <div class="flex items-center gap-1 mb-1.5">
+            <i data-lucide="sparkles" class="w-3 h-3 text-amber-500"></i>
+            <span class="text-[10px] font-bold text-slate-400">추천 꼬리 질문</span>
+          </div>
+          <div id="tail-questions-container" class="flex flex-wrap gap-1.5">
+            <!-- 꼬리 질문 버튼 동적 생성 -->
+          </div>
+        </div>
+
+        <!-- 입력창 -->
+        <div class="p-2.5 bg-white border-t border-slate-100">
+          <form onsubmit="handleSend(event)" class="relative flex items-center">
+            <input 
+              type="text" 
+              id="user-input" 
+              placeholder="추가 질문을 입력해보세요 (예: 지금 사도 돼?)" 
+              class="w-full text-xs bg-slate-100 border-none rounded-xl pl-3 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 placeholder-slate-400"
+            >
+            <button type="submit" class="absolute right-1.5 w-7 h-7 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-colors">
+              <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
+            </button>
+          </form>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- 3. MINI SIMULATION GAME MODAL: 위기 돌파 시뮬레이션 -->
+  <div id="simulation-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-100 space-y-4 fade-in">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shadow-sm shadow-purple-200">
+            <i data-lucide="gamepad-2" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+              실전 위기 극복 시뮬레이션
+              <span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-bold">1분 판단 챌린지</span>
+            </h3>
+            <p class="text-[11px] text-slate-400">올바른 결정을 내리고 경험치와 특별 칭호 배지를 획득하세요!</p>
+          </div>
+        </div>
+        <button onclick="closeSimulationModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- 시나리오 질문 컨테이너 -->
+      <div id="sim-question-box" class="space-y-3">
+        <div class="bg-purple-50/70 border border-purple-100 rounded-xl p-3.5">
+          <div class="flex items-center gap-1.5 text-xs font-bold text-purple-900 mb-1.5">
+            <span class="text-base">🚨</span> <span id="sim-scenario-title">돌발 악재 발생!</span>
+          </div>
+          <p id="sim-scenario-desc" class="text-xs text-slate-700 leading-relaxed font-medium">
+            내가 매수한 종목에 갑자기 "AI 규제 악재 및 단기 실적 쇼크" 뉴스가 뜨면서 주가가 장 시작과 동시에 -7% 급락했습니다! 초보 투자자인 당신의 선택은?
+          </p>
+        </div>
+
+        <p class="text-[11px] font-bold text-slate-400">당신의 투자 판단을 선택하세요:</p>
+        
+        <div id="sim-options-list" class="space-y-2">
+          <!-- 동적 선택지 주입 -->
+        </div>
+      </div>
+
+      <!-- 결과 및 피드백 박스 (선택 후 표시) -->
+      <div id="sim-result-box" class="hidden space-y-3 bg-slate-50 border border-slate-200 rounded-xl p-4">
+        <div class="flex items-center gap-2">
+          <span id="sim-result-icon" class="text-2xl">🧠</span>
+          <div>
+            <p id="sim-result-title" class="text-xs font-bold text-slate-900">탁월한 판단력!</p>
+            <p id="sim-badge-awarded" class="text-[11px] text-purple-700 font-extrabold flex items-center gap-1">
+              <i data-lucide="award" class="w-3.5 h-3.5"></i> '강철 멘탈' 배지 획득!
+            </p>
+          </div>
+        </div>
+        <div class="bg-white rounded-lg p-2.5 border border-slate-200 text-xs text-slate-700 leading-relaxed" id="sim-result-critique">
+          <!-- AI 코멘터리 -->
+        </div>
+        <button onclick="openNextSimulationOrFinish()" class="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs">
+          <span>경험치 (+40 EXP) 받고 계속하기</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 4. QUEST & LEVEL-UP MODAL (퀘스트 & 칭호 쇼케이스) -->
+  <div id="quest-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-100 space-y-4 fade-in">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm shadow-amber-200">
+            <i data-lucide="trophy" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm">초보자 레벨 & 미션 센터</h3>
+            <p class="text-[11px] text-slate-400">미션을 완수하고 다음 칭호로 레벨업하세요!</p>
+          </div>
+        </div>
+        <button onclick="closeQuestModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- 내 현재 랭크 카드 -->
+      <div class="bg-gradient-to-br from-blue-50 to-indigo-50/70 border border-blue-200/80 rounded-xl p-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span id="modal-level-avatar" class="text-3xl">🐣</span>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span id="modal-level-badge" class="text-xs font-black text-blue-900">Lv.1 주린이 병아리</span>
+            </div>
+            <p id="modal-level-sub" class="text-[11px] text-slate-500">다음 레벨: 똑똑한 개미 🐜</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span id="modal-total-exp" class="text-sm font-extrabold text-blue-600">0 EXP</span>
+          <p class="text-[10px] text-slate-400">누적 경험치</p>
+        </div>
+      </div>
+
+      <!-- 오늘의 일일 퀘스트 3종 -->
+      <div>
+        <p class="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1">
+          <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-blue-600"></i> 오늘의 필수 투자 퀘스트
+        </p>
+        <div class="space-y-2">
+          <!-- 퀘스트 1 -->
+          <div id="quest-item-1" class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs transition-colors">
+            <div class="flex items-center gap-2">
+              <span id="quest-check-1" class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-white"></span>
+              <div>
+                <p class="font-bold text-slate-800">1. AI 챗봇에 첫 질문 던지기</p>
+                <p class="text-[10px] text-slate-400">종목에 대해 궁금한 점을 질문해보세요</p>
+              </div>
+            </div>
+            <span class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">+20 EXP</span>
+          </div>
+
+          <!-- 퀘스트 2 -->
+          <div id="quest-item-2" class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs transition-colors">
+            <div class="flex items-center gap-2">
+              <span id="quest-check-2" class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-white"></span>
+              <div>
+                <p class="font-bold text-slate-800">2. 근거 카드 클릭해 원리 확인</p>
+                <p class="text-[10px] text-slate-400">영업이익률 또는 PER 카드를 눌러보세요</p>
+              </div>
+            </div>
+            <span class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">+20 EXP</span>
+          </div>
+
+          <!-- 퀘스트 3 -->
+          <div id="quest-item-3" class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs transition-colors">
+            <div class="flex items-center gap-2">
+              <span id="quest-check-3" class="w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-white"></span>
+              <div>
+                <p class="font-bold text-slate-800">3. 위기 극복 시뮬레이션 클리어</p>
+                <p class="text-[10px] text-slate-400">1분 투자 판단 미니게임을 완료하세요</p>
+              </div>
+            </div>
+            <span class="text-[11px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md">+40 EXP</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 획득한 칭호/배지 서랍 -->
+      <div>
+        <p class="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1">
+          <i data-lucide="sparkle" class="w-3.5 h-3.5 text-amber-500"></i> 내가 획득한 투자 칭호 배지
+        </p>
+        <div id="badges-container" class="flex flex-wrap gap-1.5">
+          <span class="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-semibold flex items-center gap-1">
+            <span>🐣</span> 입문 병아리
+          </span>
+          <!-- 획득 시 동적 추가 -->
+        </div>
+      </div>
+
+      <button onclick="closeQuestModal()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors">
+        확인 완료
+      </button>
+
+    </div>
+  </div>
+
+  <!-- 5. LEVEL UP CELEBRATION TOAST / MODAL -->
+  <div id="levelup-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl border-2 border-amber-300 space-y-4 fade-in">
+      <div class="w-20 h-20 mx-auto rounded-full bg-amber-100 border-4 border-amber-300 flex items-center justify-center shadow-lg">
+        <span id="levelup-anim-icon" class="text-4xl animate-bounce">🎉</span>
+      </div>
+      <div>
+        <span class="text-xs font-extrabold uppercase text-amber-600 tracking-wider bg-amber-50 px-3 py-1 rounded-full border border-amber-200">LEVEL UP!</span>
+        <h3 id="levelup-title" class="text-xl font-black text-slate-900 mt-2">축하합니다! Lv.2</h3>
+        <p id="levelup-name" class="text-sm font-bold text-blue-600 mt-0.5">똑똑한 개미 🐜</p>
+        <p id="levelup-desc" class="text-xs text-slate-500 mt-2 leading-relaxed">
+          기업의 이익과 밸류에이션을 분별하기 시작했습니다. 시장의 탐욕에 흔들리지 않는 현명한 투자자로 성장하고 있습니다!
+        </p>
+      </div>
+      <button onclick="closeLevelUpModal()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-all shadow-md">
+        멋져요! 계속 학습하기
+      </button>
+    </div>
+  </div>
+
+  <!-- 6. 초보 투자 사전 모달 -->
+  <div id="glossary-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+          </div>
+          <h3 class="font-bold text-slate-900 text-sm">초보 필수 투자 용어 사전</h3>
+        </div>
+        <button onclick="closeGlossaryModal()" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <p class="font-bold text-slate-800 mb-1">📈 영업이익률이란?</p>
+          <p class="text-slate-600 leading-relaxed">회사가 100원어치 물건을 팔았을 때 순수 원가와 판매 비용을 빼고 남긴 진짜 수익 비율입니다. 높을수록 독점력과 제품 경쟁력이 좋습니다.</p>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <p class="font-bold text-slate-800 mb-1">⚖️ PER (주가수익비율)이란?</p>
+          <p class="text-slate-600 leading-relaxed">회사가 1년에 버는 이익에 비해 주가가 몇 배로 비싸게 거래되는지 나타냅니다. 수치가 너무 높으면 '거품(고평가)', 낮으면 '바겐세일(저평가)' 신호입니다.</p>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <p class="font-bold text-slate-800 mb-1">🍰 분할 매수 (DCA)란?</p>
+          <p class="text-slate-600 leading-relaxed">한 번에 모든 돈을 투자하지 않고 기간이나 가격을 나누어 조금씩 매수하여 고점 매수 위험을 줄이는 초보자 필수 매매 기법입니다.</p>
+        </div>
+      </div>
+
+      <button onclick="closeGlossaryModal()" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors">
+        이해했어요
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------
+    // 1. 게이미피케이션 & 레벨업 데이터
+    // -------------------------------------------------------------
+    const LEVEL_TIERS = [
+      { level: 1, title: "Lv.1 주린이 병아리", icon: "🐣", maxExp: 60, desc: "주식 시장에 첫 발을 내딛은 호기심 가득한 투자자입니다." },
+      { level: 2, title: "Lv.2 똑똑한 개미", icon: "🐜", maxExp: 140, desc: "기업의 마진과 고평가 신호를 스스로 판별하기 시작했습니다." },
+      { level: 3, title: "Lv.3 현명한 분석가", icon: "🦊", maxExp: 240, desc: "군중 심리에 휩쓸리지 않고 데이터와 가치를 근거로 분석합니다." },
+      { level: 4, title: "Lv.4 투자의 귀재", icon: "🦁", maxExp: 380, desc: "단기 파도에 일희일비하지 않고 안전마진을 지키는 실력자입니다." },
+      { level: 5, title: "Lv.5 버핏의 후계자", icon: "👑", maxExp: 9999, desc: "마침내 위대한 기업과 동행하는 초고수 가치투자자의 반열에 올랐습니다!" }
+    ];
+
+    let userState = {
+      exp: 0,
+      level: 1,
+      quests: {
+        askQuestion: false,
+        checkEvidence: false,
+        simClear: false
+      },
+      badges: ["입문 병아리 🐣"]
+    };
+
+    // -------------------------------------------------------------
+    // 2. 미니 시뮬레이션 시나리오 데이터베이스
+    // -------------------------------------------------------------
+    const SIM_SCENARIOS = [
+      {
+        id: 1,
+        title: "⚡ 엔비디아에 갑자기 AI 규제 뉴스가 떴다!",
+        desc: "보유 중인 주식이 장 시작 직후 수출 규제 소식과 함께 -6.5% 급락했습니다. 공포에 찬 커뮤니티는 폭락을 외치고 있습니다. 당신의 대응은?",
+        options: [
+          {
+            text: "😱 무서우니 전량 손절(패닉 셀)하고 나중에 본다.",
+            badge: "연약한 멘탈",
+            isOptimal: false,
+            critique: "워런 버핏의 한마디: '단기 뉴스 한 줄에 공포에 질려 던질 주식이라면 애초에 매수하지 말았어야 하네!' 감정적인 패닉 셀은 초보자가 원금을 까먹는 가장 빠른 지름길입니다."
+          },
+          {
+            text: "🧐 회사의 독점적 해자가 깨졌는지 뉴스 원문을 읽고 관망한다.",
+            badge: "냉철한 분석가 🦊",
+            isOptimal: true,
+            critique: "친절 튜터의 칭찬: '아주 훌륭해요! 👏 단기 주가 출렁임보다 기업의 본질적인 경쟁력(영업이익률 95%)이 훼손되었는지를 먼저 차분히 확인하는 태도가 일류 투자자의 습관입니다.'"
+          },
+          {
+            text: "🛒 실적 펀더멘털이 건전하다면 미리 정해둔 분할 줍줍을 실행한다.",
+            badge: "바겐세일 사냥꾼 🎯",
+            isOptimal: true,
+            critique: "극T 분석관의 피드백: '손익비 최적화 행동입니다. 과열 구간(84°C)에서 적정 가격으로 눌림목이 형성되었을 때 분할 매수하는 것은 합리적 기대값을 제공합니다.'"
+          }
+        ]
+      },
+      {
+        id: 2,
+        title: "📱 삼성전자, 주가가 1년 내 최저점 찍었다!",
+        desc: "주가가 역사적 PBR 하단까지 내려와 모두가 실망하고 있습니다. '반도체 겨울'이라는 비관론이 쏟아집니다.",
+        options: [
+          {
+            text: "📉 남들이 다 욕하니까 지금이라도 팔고 다른 급등주 타자.",
+            badge: "급등주 불나방 🦋",
+            isOptimal: false,
+            critique: "워런 버핏의 팩폭: '바닥에서 던지고 고점에 불나방처럼 뛰어드는 짓만큼 비극적인 투자는 없네. 사이클 산업의 겨울을 버티지 못하면 봄의 열매도 맛볼 수 없지!'"
+          },
+          {
+            text: "☕ 1등 기업의 든든한 현금을 믿고 장기 적립식으로 모아간다.",
+            badge: "강철 멘탈 🛡️",
+            isOptimal: true,
+            critique: "친절 튜터의 조언: '맞아요! 남들이 공포에 질려 바겐세일을 할 때가 오히려 분할 매수의 황금 시간대예요. 긴 호흡으로 함께해요!'"
+          }
+        ]
+      }
+    ];
+
+    let currentSimIndex = 0;
+
+    // -------------------------------------------------------------
+    // 3. 종목 종합 데이터베이스
+    // -------------------------------------------------------------
+    const stockData = {
+      AAPL: {
+        ticker: "AAPL",
+        name: "애플 (AAPL)",
+        shortName: "애플",
+        avatar: "👑",
+        tagline: "콧대 높은 명품 맛집",
+        verdict: "신중한 관망",
+        verdictColor: "text-amber-700 bg-amber-100/80",
+        score: 56,
+        temp: 56,
+        rank: "58개 중 26위",
+        opProfit: 88,
+        perPercent: 22,
+        histogram: [4, 8, 15, 24, 18, 12, 6],
+        myPositionIndex: 4,
+        opDesc: "물건을 팔아서 원가와 경비를 뺀 뒤 손에 쥐는 진짜 마진입니다. 동종업계 상위 12% 수준으로 압도적인 수익성을 자랑합니다.",
+        perDesc: "회사가 버는 이익 대비 주가가 얼마나 비싼지 나타냅니다. 22%로 낮게 평가된 수치는 '현재 주가가 이익에 비해 상당히 비싸다'는 경고 신호입니다.",
+        phrase1: { tag: "수익성 극상", sub: "· 영업이익률 88%", main: '"돈은 아주 잘 버는 알짜 회사입니다."', desc: "100원 팔아서 30원 이상 남기는 강력한 현금 창출력" },
+        phrase2: { tag: "가격 부담 경보", sub: "· PER 22% 백분위", main: '"다만 지금 주가에 거품이 껴서 비쌉니다."', desc: "원금 회수에 34년 걸리는 높은 권리금이 붙어있음" },
+        summary: "지금 한 번에 다 사지 말고, 쪼개서 매수(분할 매수)하는 것을 권장합니다.",
+        responses: {
+          friendly: {
+            desc: "어려운 주식 용어를 일상 비유로 쉽게 설명해 드려요.",
+            greeting: "애플은 아이폰을 기가 막히게 팔아서 마진이 엄청난 알짜 회사예요! 💰\n다만, 이미 인기가 너무 많아서 지금 밥값이 꽤 비싸진 상태(PER 22% 백분위)예요. 지금 몽땅 사기보다는, 가격이 살짝 내려올 때마다 나누어 사 모으는(분할 매수) 전략이 가장 편안합니다!",
+            tails: ["지금 1주만 사볼까?", "PER이 왜 비싸다는 거야?", "배당금도 나와?"]
+          },
+          buffett: {
+            desc: "장기 가치투자 관점에서 거품과 탐욕을 꼬집는 팩트 폭격기입니다.",
+            greeting: "뛰어난 비즈니스 해자를 가졌다는 건 인정하네. 하지만 아무리 훌륭한 기업이라도 턱없이 비싼 가격에 사면 손실을 보게 되지! 📉\n지금 가격에 전액 매수하는 건 시장의 탐욕에 휘둘리는 짓이야. 안전마진이 확보될 때까지 인내심을 갖게나.",
+            tails: ["그럼 얼마에 사야 돼?", "워런 버핏은 애플 팔았어?", "안전마진이 뭔데?"]
+          },
+          analyst: {
+            desc: "감정을 배제하고 수치와 확률, 손익비로만 브리핑합니다.",
+            greeting: "데이터 분석 결과 보고: 영업이익률 상위 12%로 펀더멘털 건전. 단, 밸류에이션 지표 PER 기준 업종 하위 22%로 명백한 고평가 영역에 진입.\n단기 변동성 리스크가 높으므로 목표 손익비 설정 및 DCA(분할적립) 진입을 권고합니다.",
+            tails: ["정확한 목표 주가는?", "손익비 계산해줘", "경쟁사 밸류에이션 비교"]
+          }
+        }
+      },
+      "005930": {
+        ticker: "005930",
+        name: "삼성전자 (005930)",
+        shortName: "삼성전자",
+        avatar: "🛡️",
+        tagline: "무게 잡는 우량 우직이",
+        verdict: "저평가 분할매수",
+        verdictColor: "text-blue-700 bg-blue-100/80",
+        score: 72,
+        temp: 34,
+        rank: "58개 중 8위",
+        opProfit: 65,
+        perPercent: 78,
+        histogram: [10, 18, 25, 20, 12, 5, 2],
+        myPositionIndex: 1,
+        opDesc: "반도체 사이클 주기와 스마트폰 부문의 안정적인 현금 흐름으로 기초체력이 탄탄합니다.",
+        perDesc: "역사적 저점 수준(78% 저평가 매력)으로, 현재 가격은 실적 대비 매우 저렴한 가격표가 붙어있습니다.",
+        phrase1: { tag: "기초체력 든든", sub: "· 영업이익률 65%", main: '"세계 1등 반도체 체력을 갖췄습니다."', desc: "업황 둔화기에도 버텨내는 막대한 현금 보유량" },
+        phrase2: { tag: "세일 구간 포착", sub: "· 저평가 78% 매력", main: '"주가가 바닥권에 근접해 저렴합니다."', desc: "실적 대비 주가 부담이 매우 낮은 할인 마트 상태" },
+        summary: "공포에 흔들리지 말고 길게 보며 천천히 주식을 모아가기 매력적인 구간입니다.",
+        responses: {
+          friendly: {
+            desc: "어려운 주식 용어를 일상 비유로 쉽게 설명해 드려요.",
+            greeting: "대한민국 대표 우량주 삼성전자예요! 든든하지만 반도체 사이클 때문에 최근 주가가 많이 눌려 있어요.\n대신 가격 부담이 적은 '바겐세일' 구간에 진입해 있어서 길게 보고 모아가기엔 꽤 매력적인 자리입니다!",
+            tails: ["지금이 바닥이야?", "외국인이 많이 사?", "배당금은 얼마 줘?"]
+          },
+          buffett: {
+            desc: "장기 가치투자 관점에서 거품과 탐욕을 꼬집는 팩트 폭격기입니다.",
+            greeting: "남들이 공포에 질려 던질 때가 기회라는 격언을 잊었나? 밸류에이션상 매력적인 구간에 도달했네. 단, 반도체 치킨게임의 주기를 버틸 인내심이 없는 자라면 쳐다보지도 말게!",
+            tails: ["언제 반등할까?", "공포에 사는 법 알려줘", "경쟁사 TSMC랑 비교"]
+          },
+          analyst: {
+            desc: "감정을 배제하고 수치와 확률, 손익비로만 브리핑합니다.",
+            greeting: "PBR 역사적 하단 구간. 영업이익 반등 시그널 포착 중. 하방 경직성은 확보되었으나 HBM 납품 실적 확인 전까지 박스권 횡보 확률 62%로 산출됩니다.",
+            tails: ["HBM 납품 현황은?", "지지선 어디야?", "외국인/기관 수급"]
+          }
+        }
+      },
+      NVDA: {
+        ticker: "NVDA",
+        name: "엔비디아 (NVDA)",
+        shortName: "엔비디아",
+        avatar: "🚀",
+        tagline: "우주선 탄 독점 괴물",
+        verdict: "고위험 고수익",
+        verdictColor: "text-rose-700 bg-rose-100/80",
+        score: 68,
+        temp: 84,
+        rank: "58개 중 14위",
+        opProfit: 95,
+        perPercent: 15,
+        histogram: [2, 5, 10, 18, 22, 28, 15],
+        myPositionIndex: 6,
+        opDesc: "AI 반도체 시장의 압도적인 독점으로 95%라는 경이로운 마진 수익성을 달성하고 있습니다.",
+        perDesc: "앞으로 10년 치 기대감이 반영되어 PER 15% 백분위로 고평가 구간에 진입해 있습니다.",
+        phrase1: { tag: "독점 마진 폭발", sub: "· 영업이익률 95%", main: '"AI 시대의 엔진을 독점 공급합니다."', desc: "팔면 팔수록 돈이 쏟아지는 압도적 기술력" },
+        phrase2: { tag: "온도계 과열 주의", sub: "· 온도계 84°C", main: '"기대치가 높아 작은 악재에도 출렁입니다."', desc: "실적이 1%라도 기대에 못 미치면 변동성 급증" },
+        summary: "수익성은 최상이지만 변동성이 크므로 몰빵 투자는 금물이며 조심스런 접근이 필요합니다.",
+        responses: {
+          friendly: {
+            desc: "어려운 주식 용어를 일상 비유로 쉽게 설명해 드려요.",
+            greeting: "AI 칩 시장의 절대 강자 엔비디아예요! 💥\n마진율이 무려 95%로 엄청나지만, 그만큼 기대치가 하늘을 찌르고 있어서(온도계 84°C) 작은 뉴스에도 주가가 출렁거릴 수 있으니 주의하세요!",
+            tails: ["AI 거품 아니야?", "엔비디아 대체제 있어?", "지금 들어가면 물릴까?"]
+          },
+          buffett: {
+            desc: "장기 가치투자 관점에서 거품과 탐욕을 꼬집는 팩트 폭격기입니다.",
+            greeting: "기술의 혁신에는 박수를 보내네. 하지만 현재 주가에는 앞으로 10년 치 장밋빛 미래가 전부 선반영되어 있네. 기대치에 1%라도 미달하면 주가는 무섭게 곤두박질칠 걸세!",
+            tails: ["실적 발표 언제야?", "적정 주가는 얼마?", "테크주 위험성"]
+          },
+          analyst: {
+            desc: "감정을 배제하고 수치와 확률, 손익비로만 브리핑합니다.",
+            greeting: "데이터 센터 매출 CAGR +80% 상회. 단기 RSI 72 과매수 신호 발생. 변동성 지수(Beta) 2.1로 급등락 리스크가 극대화된 상태입니다.",
+            tails: ["RSI가 뭐야?", "빅테크 공급망 의존도", "빅 쇼트 신호는?"]
+          }
+        }
+      },
+      TSLA: {
+        ticker: "TSLA",
+        name: "테슬라 (TSLA)",
+        shortName: "테슬라",
+        avatar: "🎢",
+        tagline: "야망 가득 롤러코스터",
+        verdict: "변동성 주의",
+        verdictColor: "text-purple-700 bg-purple-100/80",
+        score: 48,
+        temp: 72,
+        rank: "58개 중 39위",
+        opProfit: 52,
+        perPercent: 30,
+        histogram: [5, 12, 20, 25, 20, 10, 8],
+        myPositionIndex: 5,
+        opDesc: "전기차 가격 인하 경쟁으로 마진율이 52% 수준까지 조정받고 있는 상황입니다.",
+        perDesc: "자율주행 FSD와 로봇 기대감이 포함되어 여전히 높은 프리미엄에 거래 중입니다.",
+        phrase1: { tag: "꿈과 비전", sub: "· 미래 모빌리티", main: '"단순한 차가 아닌 로봇/AI 기업을 지향합니다."', desc: "자율주행과 에너지 사업의 무한한 확장 가능성" },
+        phrase2: { tag: "마진율 압박", sub: "· 영업이익률 52%", main: '"전기차 치킨게임으로 단기 수익성은 둔화."', desc: "CEO 관련 뉴스 및 정책 변동성에 주가 급변" },
+        summary: "장기 비전은 뚜렷하나 롤러코스터 변동성을 버틸 수 있는 소액 분할 투자가 적합합니다.",
+        responses: {
+          friendly: {
+            desc: "어려운 주식 용어를 일상 비유로 쉽게 설명해 드려요.",
+            greeting: "전기차뿐만 아니라 자율주행, 로봇까지 꿈꾸는 혁신 기업 테슬라예요! ⚡\n미래 기대감이 큰 만큼 뉴스 하나에 주가가 롤러코스터를 타니, 심장이 약한 초보자라면 소액으로만 경험해 보세요!",
+            tails: ["로보택시 진짜 돼?", "일론 머스크 리스크는?", "전기차 경쟁 심해?"]
+          },
+          buffett: {
+            desc: "장기 가치투자 관점에서 거품과 탐욕을 꼬집는 팩트 폭격기입니다.",
+            greeting: "자동차 제조는 자본이 끝없이 들어가는 거친 산업이네. CEO의 한마디에 주가가 춤추는 기업은 영구적인 자본 손실을 부르기 십상이야. 예측 불가능성에 베팅하지 말게!",
+            tails: ["FSD 성공할까?", "제조업 마진 한계는?", "테슬라의 경제적 해자"]
+          },
+          analyst: {
+            desc: "감정을 배제하고 수치와 확률, 손익비로만 브리핑합니다.",
+            greeting: "EV 마진율 축소 추세 vs FSD 라이선싱 모멘텀 상충. 표준편차 기준 최고 위험군 자산으로 분류되며 트레이딩 관점의 분할 접근 외 장기 홀딩 위험 지수 4등급입니다.",
+            tails: ["EV 마진율 추이", "옵티머스 가치 평가", "지지/저항선 차트"]
+          }
+        }
+      }
+    };
+
+    // 전역 상태
+    let currentStockKey = 'AAPL';
+    let currentPersona = 'friendly';
+    let currentView = 'initial'; // 'initial' or 'analysis'
+
+    // -------------------------------------------------------------
+    // 4. 게이미피케이션 핵심 로직 (EXP 추가 및 레벨업 체크)
+    // -------------------------------------------------------------
+    function addExp(amount, reason = "") {
+      userState.exp += amount;
+      checkLevelProgression();
+      updateGamificationUI();
+      showExpToast(`+${amount} EXP! ${reason}`);
+    }
+
+    function checkLevelProgression() {
+      const prevLevel = userState.level;
+      let newLevel = 1;
+
+      for (let i = LEVEL_TIERS.length - 1; i >= 0; i--) {
+        if (userState.exp >= LEVEL_TIERS[i].maxExp) {
+          newLevel = Math.min(i + 2, LEVEL_TIERS.length);
+          break;
+        }
+      }
+
+      if (newLevel > prevLevel) {
+        userState.level = newLevel;
+        triggerLevelUpCelebration(newLevel);
+      }
+    }
+
+    function updateGamificationUI() {
+      const tier = LEVEL_TIERS[userState.level - 1];
+      const prevTierExp = userState.level === 1 ? 0 : LEVEL_TIERS[userState.level - 2].maxExp;
+      const nextTierExp = tier.maxExp;
+      
+      const currentLevelExp = userState.exp - prevTierExp;
+      const targetLevelExp = nextTierExp - prevTierExp;
+      const percent = Math.min(Math.round((currentLevelExp / targetLevelExp) * 100), 100);
+
+      // 상단 바 업데이트
+      document.getElementById('top-level-icon').textContent = tier.icon;
+      document.getElementById('top-level-title').textContent = tier.title;
+      document.getElementById('top-exp-text').textContent = `${userState.exp}/${tier.maxExp} EXP`;
+      document.getElementById('top-exp-bar').style.width = `${percent}%`;
+
+      // 퀘스트 모달 및 초기 화면 뱃지 갱신
+      document.getElementById('modal-level-avatar').textContent = tier.icon;
+      document.getElementById('modal-level-badge').textContent = tier.title;
+      document.getElementById('modal-total-exp').textContent = `${userState.exp} EXP`;
+      document.getElementById('welcome-badge-icon').textContent = tier.icon;
+      
+      const nextTitle = userState.level < LEVEL_TIERS.length ? LEVEL_TIERS[userState.level].title : "최고 레벨 달성!";
+      document.getElementById('modal-level-sub').textContent = `다음 레벨: ${nextTitle}`;
+
+      // 퀘스트 완료 상태 표시
+      updateQuestItemStatus('quest-item-1', 'quest-check-1', userState.quests.askQuestion);
+      updateQuestItemStatus('quest-item-2', 'quest-check-2', userState.quests.checkEvidence);
+      updateQuestItemStatus('quest-item-3', 'quest-check-3', userState.quests.simClear);
+
+      const doneCount = Object.values(userState.quests).filter(Boolean).length;
+      document.getElementById('quest-ratio-badge').textContent = `${doneCount}/3`;
+
+      // 뱃지 쇼케이스 렌더링
+      const badgeBox = document.getElementById('badges-container');
+      badgeBox.innerHTML = '';
+      userState.badges.forEach(b => {
+        const badgeEl = document.createElement('span');
+        badgeEl.className = "px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-semibold flex items-center gap-1 fade-in";
+        badgeEl.textContent = b;
+        badgeBox.appendChild(badgeEl);
+      });
+    }
+
+    function updateQuestItemStatus(itemId, checkId, isDone) {
+      const item = document.getElementById(itemId);
+      const check = document.getElementById(checkId);
+      if (isDone) {
+        item.classList.add('bg-emerald-50', 'border-emerald-200');
+        check.className = "w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] text-white font-bold";
+        check.innerHTML = '✓';
+      } else {
+        item.classList.remove('bg-emerald-50', 'border-emerald-200');
+        check.className = "w-4 h-4 rounded-full border border-slate-300 flex items-center justify-center text-[10px] text-white";
+        check.innerHTML = '';
+      }
+    }
+
+    // 레벨업 축하 파티클 및 팝업
+    function triggerLevelUpCelebration(newLevel) {
+      const tier = LEVEL_TIERS[newLevel - 1];
+
+      // Confetti 폭죽 발사
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+
+      document.getElementById('levelup-anim-icon').textContent = tier.icon;
+      document.getElementById('levelup-title').textContent = `축하합니다! Lv.${tier.level}`;
+      document.getElementById('levelup-name').textContent = tier.title;
+      document.getElementById('levelup-desc').textContent = tier.desc;
+      document.getElementById('levelup-modal').classList.remove('hidden');
+
+      // 새 칭호 배지 수여
+      if (!userState.badges.includes(tier.title)) {
+        userState.badges.push(tier.title);
+      }
+    }
+
+    function closeLevelUpModal() {
+      document.getElementById('levelup-modal').classList.add('hidden');
+    }
+
+    function showExpToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = "fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xl z-50 flex items-center gap-2 border border-slate-700 fade-in";
+      toast.innerHTML = `<span class="text-amber-400">✨</span> <span>${msg}</span>`;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.4s ease';
+        setTimeout(() => toast.remove(), 400);
+      }, 2500);
+    }
+
+    // -------------------------------------------------------------
+    // 5. 미니 시뮬레이션 게임 실행 로직
+    // -------------------------------------------------------------
+    function openSimulationModal() {
+      loadSimScenario(currentSimIndex);
+      document.getElementById('simulation-modal').classList.remove('hidden');
+    }
+
+    function closeSimulationModal() {
+      document.getElementById('simulation-modal').classList.add('hidden');
+    }
+
+    function loadSimScenario(idx) {
+      const sc = SIM_SCENARIOS[idx % SIM_SCENARIOS.length];
+      document.getElementById('sim-scenario-title').textContent = sc.title;
+      document.getElementById('sim-scenario-desc').textContent = sc.desc;
+      document.getElementById('sim-question-box').classList.remove('hidden');
+      document.getElementById('sim-result-box').classList.add('hidden');
+
+      const optContainer = document.getElementById('sim-options-list');
+      optContainer.innerHTML = '';
+
+      sc.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.className = "w-full text-left p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-purple-50 hover:border-purple-300 text-xs text-slate-800 font-medium transition-all flex items-center justify-between group";
+        btn.innerHTML = `
+          <span>${opt.text}</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-purple-600 transition-colors"></i>
+        `;
+        btn.onclick = () => chooseSimOption(opt);
+        optContainer.appendChild(btn);
+      });
+      lucide.createIcons();
+    }
+
+    function chooseSimOption(opt) {
+      document.getElementById('sim-question-box').classList.add('hidden');
+      const resultBox = document.getElementById('sim-result-box');
+      resultBox.classList.remove('hidden');
+
+      document.getElementById('sim-result-critique').textContent = opt.critique;
+      document.getElementById('sim-badge-awarded').textContent = `🏆 '${opt.badge}' 획득!`;
+      
+      // 칭호 추가
+      if (!userState.badges.includes(opt.badge)) {
+        userState.badges.push(opt.badge);
+      }
+
+      // 퀘스트 3 완료 처리 및 경험치 부여
+      if (!userState.quests.simClear) {
+        userState.quests.simClear = true;
+        addExp(40, "미니 시뮬레이션 클리어!");
+      } else {
+        addExp(15, "추가 훈련 완료!");
+      }
+    }
+
+    function openNextSimulationOrFinish() {
+      currentSimIndex++;
+      closeSimulationModal();
+    }
+
+    // -------------------------------------------------------------
+    // 6. 뷰 전환 및 화면 상태 제어
+    // -------------------------------------------------------------
+    function switchView(viewName) {
+      currentView = viewName;
+      const initialEl = document.getElementById('initial-chat-view');
+      const analysisEl = document.getElementById('analysis-view');
+      const homeMenuBtn = document.getElementById('menu-btn-home');
+      const analysisMenuBtn = document.getElementById('menu-btn-analysis');
+
+      if (viewName === 'initial') {
+        initialEl.classList.remove('hidden');
+        analysisEl.classList.add('hidden');
+        
+        homeMenuBtn.className = "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 transition-colors";
+        analysisMenuBtn.className = "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors";
+
+        document.querySelectorAll('.stock-tab').forEach(btn => {
+          btn.classList.remove('bg-white', 'text-blue-600', 'shadow-xs', 'font-semibold');
+          btn.classList.add('font-medium', 'text-slate-600');
+        });
+      } else {
+        initialEl.classList.add('hidden');
+        analysisEl.classList.remove('hidden');
+
+        homeMenuBtn.className = "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors";
+        analysisMenuBtn.className = "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 transition-colors";
+
+        setTimeout(() => {
+          drawHistogram(stockData[currentStockKey].histogram, stockData[currentStockKey].myPositionIndex);
+        }, 50);
+      }
+    }
+
+    function resetToInitialChat() {
+      switchView('initial');
+      const initInput = document.getElementById('initial-user-input');
+      if (initInput) initInput.focus();
+    }
+
+    function ensureAnalysisView() {
+      if (currentView !== 'analysis') {
+        selectStockAndAnalyze(currentStockKey);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 7. 종목 선택 및 3단 분석 화면으로 전환
+    // -------------------------------------------------------------
+    function selectStockAndAnalyze(ticker, customUserQuestion = null) {
+      if (!stockData[ticker]) {
+        ticker = 'AAPL';
+      }
+      currentStockKey = ticker;
+      const data = stockData[ticker];
+
+      // 상단 탭 갱신
+      document.querySelectorAll('.stock-tab').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-blue-600', 'shadow-xs', 'font-semibold');
+        btn.classList.add('font-medium', 'text-slate-600');
+      });
+      const activeTab = document.getElementById(`tab-${ticker}`);
+      if (activeTab) {
+        activeTab.classList.remove('font-medium', 'text-slate-600');
+        activeTab.classList.add('bg-white', 'text-blue-600', 'shadow-xs', 'font-semibold');
+      }
+
+      // 좌측 근거 데이터 업데이트
+      document.getElementById('label-op-percent').textContent = `${data.opProfit}%`;
+      document.getElementById('bar-operating-profit').style.width = `${data.opProfit}%`;
+      document.getElementById('op-explanation').innerHTML = `💡 <strong class="font-bold">초보 해설:</strong> ${data.opDesc}`;
+
+      document.getElementById('label-per-percent').textContent = `${data.perPercent}%`;
+      document.getElementById('bar-per').style.width = `${data.perPercent}%`;
+      document.getElementById('per-explanation').innerHTML = `⚠️ <strong class="font-bold">초보 해설:</strong> ${data.perDesc}`;
+
+      // 중앙 종합의견 비주얼 업데이트
+      document.getElementById('rank-badge').textContent = data.rank;
+      document.getElementById('stock-avatar').textContent = data.avatar;
+      document.getElementById('stock-name-title').textContent = data.name;
+      document.getElementById('stock-tagline').textContent = data.tagline;
+      
+      const verdictEl = document.getElementById('stock-verdict-pill');
+      verdictEl.textContent = data.verdict;
+      verdictEl.className = `text-[11px] font-bold px-2.5 py-1 rounded-lg ${data.verdictColor}`;
+
+      document.getElementById('score-display').textContent = data.score;
+      document.getElementById('temp-label').textContent = `${data.temp}°C ${data.temp > 70 ? '과열' : (data.temp < 40 ? '할인' : '적정')}`;
+      document.getElementById('temp-indicator').style.left = `${data.temp}%`;
+
+      // 비유 문장 업데이트
+      document.getElementById('phrase-tag-1').textContent = data.phrase1.tag;
+      document.getElementById('phrase-sub-1').textContent = data.phrase1.sub;
+      document.getElementById('phrase-main-1').textContent = data.phrase1.main;
+      document.getElementById('phrase-desc-1').textContent = data.phrase1.desc;
+
+      document.getElementById('phrase-tag-2').textContent = data.phrase2.tag;
+      document.getElementById('phrase-sub-2').textContent = data.phrase2.sub;
+      document.getElementById('phrase-main-2').textContent = data.phrase2.main;
+      document.getElementById('phrase-desc-2').textContent = data.phrase2.desc;
+
+      document.getElementById('final-verdict-summary').innerHTML = `🎯 <span class="text-blue-600 font-bold">초보 투자 가이드:</span> ${data.summary}`;
+
+      // 3단 화면으로 전환
+      switchView('analysis');
+
+      // 우측 챗봇 대화 초기화 및 시작
+      initChatForStock(customUserQuestion || `"${data.shortName} 어때?"`);
+    }
+
+    // 근거 카드 클릭 시 학습 이벤트 & EXP 지급
+    function clickEvidenceCard(cardId) {
+      jumpToEvidence(cardId);
+      if (!userState.quests.checkEvidence) {
+        userState.quests.checkEvidence = true;
+        addExp(20, "근거 카드 학습 완료!");
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 8. 페르소나 변경 처리
+    // -------------------------------------------------------------
+    function setGlobalPersona(personaKey) {
+      currentPersona = personaKey;
+      
+      ['friendly', 'buffett', 'analyst'].forEach(key => {
+        const btn = document.getElementById(`persona-btn-${key}`);
+        if (btn) {
+          if (key === personaKey) {
+            btn.className = "persona-tab py-1.5 px-2 rounded-lg text-[11px] font-bold bg-white text-blue-600 shadow-xs flex items-center justify-center gap-1 transition-all";
+          } else {
+            btn.className = "persona-tab py-1.5 px-2 rounded-lg text-[11px] font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1 transition-all";
+          }
+        }
+      });
+
+      ['friendly', 'buffett', 'analyst'].forEach(key => {
+        const btn = document.getElementById(`init-persona-${key}`);
+        if (btn) {
+          if (key === personaKey) {
+            btn.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-bold bg-white text-blue-600 shadow-xs flex items-center justify-center gap-1.5 transition-all";
+          } else {
+            btn.className = "flex-1 py-1.5 px-3 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 transition-all";
+          }
+        }
+      });
+
+      const personaInfo = stockData[currentStockKey].responses[personaKey];
+      const iconMap = { friendly: "🧑‍🏫", buffett: "🧓", analyst: "🤖" };
+      
+      const iconEl = document.getElementById('persona-icon');
+      const descEl = document.getElementById('persona-desc');
+      if (iconEl) iconEl.textContent = iconMap[personaKey];
+      if (descEl) descEl.textContent = personaInfo.desc;
+
+      if (currentView === 'analysis') {
+        initChatForStock();
+      }
+    }
+
+    function initChatForStock(userMsg = null) {
+      const data = stockData[currentStockKey];
+      const pData = data.responses[currentPersona];
+      const chatContainer = document.getElementById('chat-messages');
+
+      const questionText = userMsg || `"${data.shortName} 어때?"`;
+
+      chatContainer.innerHTML = `
+        <div class="flex items-start justify-end gap-2 fade-in">
+          <div class="bg-blue-600 text-white rounded-2xl rounded-tr-xs px-3.5 py-2 max-w-[80%] shadow-xs">
+            <p class="font-medium leading-relaxed">${questionText}</p>
+          </div>
+        </div>
+
+        <div class="flex items-start gap-2 fade-in">
+          <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+            ${document.getElementById('persona-icon').textContent}
+          </div>
+          <div class="bg-slate-100 text-slate-800 rounded-2xl rounded-tl-xs px-3.5 py-2.5 max-w-[85%] leading-relaxed whitespace-pre-line border border-slate-200/50 shadow-xs">
+            ${pData.greeting}
+          </div>
+        </div>
+      `;
+
+      const tailContainer = document.getElementById('tail-questions-container');
+      tailContainer.innerHTML = '';
+      pData.tails.forEach(text => {
+        const chip = document.createElement('button');
+        chip.className = "text-[11px] bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 border border-slate-200 rounded-full px-2.5 py-1 transition-colors text-left";
+        chip.textContent = text;
+        chip.onclick = () => askQuestion(text);
+        tailContainer.appendChild(chip);
+      });
+
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // -------------------------------------------------------------
+    // 9. 질문 핸들링 & 미션 1 완료 처리
+    // -------------------------------------------------------------
+    function handleInitialSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('initial-user-input');
+      const query = input.value.trim();
+      if (!query) return;
+
+      input.value = '';
+      
+      // 퀘스트 1 완료 처리
+      if (!userState.quests.askQuestion) {
+        userState.quests.askQuestion = true;
+        addExp(20, "첫 질문 퀘스트 완료!");
+      }
+
+      routeAndAnalyze(query);
+    }
+
+    function triggerSampleQuestion(ticker, question) {
+      if (!userState.quests.askQuestion) {
+        userState.quests.askQuestion = true;
+        addExp(20, "추천 질문 퀘스트 완료!");
+      }
+      selectStockAndAnalyze(ticker, question);
+    }
+
+    function routeAndAnalyze(query) {
+      let matched = 'AAPL';
+      const q = query.toLowerCase();
+
+      if (q.includes('삼성') || q.includes('삼전') || q.includes('samsung') || q.includes('005930')) {
+        matched = '005930';
+      } else if (q.includes('엔비') || q.includes('nvidia') || q.includes('nvda')) {
+        matched = 'NVDA';
+      } else if (q.includes('테슬') || q.includes('tesla') || q.includes('tsla')) {
+        matched = 'TSLA';
+      } else {
+        matched = 'AAPL';
+      }
+
+      selectStockAndAnalyze(matched, query);
+    }
+
+    function handleSend(e) {
+      e.preventDefault();
+      const input = document.getElementById('user-input');
+      const query = input.value.trim();
+      if (!query) return;
+      input.value = '';
+      askQuestion(query);
+    }
+
+    function askQuestion(text) {
+      const chatContainer = document.getElementById('chat-messages');
+
+      // 추가 질문 시 소량의 경험치 지속 제공
+      addExp(5, "심화 탐구");
+
+      const userBubble = document.createElement('div');
+      userBubble.className = "flex items-start justify-end gap-2 fade-in";
+      userBubble.innerHTML = `
+        <div class="bg-blue-600 text-white rounded-2xl rounded-tr-xs px-3.5 py-2 max-w-[80%] shadow-xs">
+          <p class="font-medium leading-relaxed">${text}</p>
+        </div>
+      `;
+      chatContainer.appendChild(userBubble);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      const loadingBubble = document.createElement('div');
+      loadingBubble.className = "flex items-start gap-2 fade-in";
+      loadingBubble.innerHTML = `
+        <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+          ${document.getElementById('persona-icon').textContent}
+        </div>
+        <div class="bg-slate-100 text-slate-500 rounded-2xl rounded-tl-xs px-3.5 py-2 text-xs flex items-center gap-1 border border-slate-200/50">
+          <span class="inline-block w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+          <span class="inline-block w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+          <span class="inline-block w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+        </div>
+      `;
+      chatContainer.appendChild(loadingBubble);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      setTimeout(() => {
+        if (loadingBubble.parentNode) {
+          chatContainer.removeChild(loadingBubble);
+        }
+
+        const data = stockData[currentStockKey];
+        let answer = "";
+        if (currentPersona === 'friendly') {
+          answer = `'${data.shortName}'에 대해 아주 좋은 관점을 짚어주셨어요! 초보자라면 절대 빚내서 투자하지 마시고, 3~6개월 동안 여윳돈으로 쪼개서 적립식 매수를 시도해보는 것을 권장합니다. 😊`;
+        } else if (currentPersona === 'buffett') {
+          answer = `그 질문을 던지는 자네의 눈빛에 조급함이 묻어있네. 가격이 아니라 비즈니스를 봐야 하네. 향후 10년 동안 경쟁자가 결코 넘볼 수 없는 해자를 가졌는지 스스로 냉철하게 확신할 수 있을 때에만 지갑을 열게!`;
+        } else {
+          answer = `[정밀 데이터 분석] 변동성 대비 기대수익 비율(Sharpe Ratio) 현재 1.25 산출. 단기 지지선 이탈 시 하방 리스크가 존재하므로 총 투자 가능 자산의 15% 이내로 포지션 사이징(비중 조절)을 유지하십시오.`;
+        }
+
+        const aiBubble = document.createElement('div');
+        aiBubble.className = "flex items-start gap-2 fade-in";
+        aiBubble.innerHTML = `
+          <div class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">
+            ${document.getElementById('persona-icon').textContent}
+          </div>
+          <div class="bg-slate-100 text-slate-800 rounded-2xl rounded-tl-xs px-3.5 py-2.5 max-w-[85%] leading-relaxed border border-slate-200/50 shadow-xs">
+            ${answer}
+          </div>
+        `;
+        chatContainer.appendChild(aiBubble);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }, 550);
+    }
+
+    // -------------------------------------------------------------
+    // 10. 시각화 & 캔버스 & 모달 유틸리티
+    // -------------------------------------------------------------
+    function jumpToEvidence(cardId) {
+      const card = document.getElementById(cardId);
+      if (!card) return;
+
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.classList.add('highlight-pulse');
+      setTimeout(() => {
+        card.classList.remove('highlight-pulse');
+      }, 2000);
+    }
+
+    function drawHistogram(dataArr, myPos) {
+      const canvas = document.getElementById('distCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      const barCount = dataArr.length;
+      const gap = 6;
+      const barWidth = (w - (barCount - 1) * gap - 20) / barCount;
+      const maxVal = Math.max(...dataArr);
+      const startX = 10;
+      const baseY = h - 22;
+
+      ctx.beginPath();
+      ctx.moveTo(0, baseY);
+      ctx.lineTo(w, baseY);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      dataArr.forEach((val, i) => {
+        const barH = (val / maxVal) * (h - 38);
+        const x = startX + i * (barWidth + gap);
+        const y = baseY - barH;
+
+        if (i === myPos) {
+          ctx.fillStyle = '#2563eb';
+        } else {
+          ctx.fillStyle = '#cbd5e1';
+        }
+
+        ctx.beginPath();
+        ctx.roundRect(x, y, barWidth, barH, [4, 4, 0, 0]);
+        ctx.fill();
+
+        if (i === myPos) {
+          ctx.beginPath();
+          ctx.arc(x + barWidth / 2, baseY + 12, 4.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#2563eb';
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.arc(x + barWidth / 2, baseY + 12, 7, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(37, 99, 235, 0.3)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      });
+    }
+
+    function openQuestModal() {
+      updateGamificationUI();
+      document.getElementById('quest-modal').classList.remove('hidden');
+    }
+    function closeQuestModal() {
+      document.getElementById('quest-modal').classList.add('hidden');
+    }
+
+    function openGlossaryModal() {
+      document.getElementById('glossary-modal').classList.remove('hidden');
+    }
+    function closeGlossaryModal() {
+      document.getElementById('glossary-modal').classList.add('hidden');
+    }
+
+    // -------------------------------------------------------------
+    // 11. 초기화 실행
+    // -------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      switchView('initial');
+      setGlobalPersona('friendly');
+      updateGamificationUI();
+    });
+  </script>
+</body>
+</html>
