@@ -10,6 +10,8 @@ contracts/db_schema.sql 을 그대로 읽어서 만듭니다 — 계약이 바�
   - 폐지 예정     : Form 25 접수됐지만 아직 거래 중 → 점수 + 최대 경고
   - 시총 없음     : 밸류에이션 축 통째로 결측
   - 자본잠식      : equity<0 -> 부채비율·PBR·ROE가 전부 뒤집히는 가장 위험한 덫
+  - 극단 이상치   : 영업이익률 -4000% 같은 값. 분포 히스토그램이 한 칸에 뭉개지는지
+                   검사가 물게 하려면 정규분포만으로는 안 됩니다
   - 표본 부족 업종 : 12개뿐인 SIC → 폴백 사다리 작동 확인
 """
 import random, sqlite3, pathlib
@@ -75,6 +77,10 @@ def build(path=None):
 
             scale = rnd.lognormvariate(20, 1.2)
             margin = rnd.gauss(0.12, 0.09)
+            # 실데이터의 꼬리를 흉내냅니다. 정규분포만 넣으면 분포 히스토그램
+            # 버그(222개 중 218개가 한 칸)를 검사가 못 잡습니다 — 실제로 놓쳤습니다.
+            if rnd.random() < 0.04:
+                margin = rnd.choice([-40.0, -12.0, 8.0, 25.0])
             growth = rnd.gauss(0.06, 0.10)
             years = YEARS[-2:] if kind == "new_listing" else YEARS
             for y in years:

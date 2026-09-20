@@ -194,6 +194,26 @@ def _():
             assert sum(i["peer_deciles"]) <= n, f"{i['id']} 가 다른 모집단을 씁니다"
 
 
+@check("분포 히스토그램이 한 칸에 몰리지 않습니다")
+def _():
+    # 최소~최대로 나누면 실데이터에서 막대 하나만 남습니다 (222개 중 218개가 한 칸).
+    # 재무비율에 -10000% 같은 극단값이 섞여 있어서입니다. 드릴다운의 핵심 화면이라
+    # 막대가 하나뿐이면 기능이 죽습니다.
+    worst = None
+    for ticker in list(E.by_ticker)[:120]:
+        for i in indicators(E.score(ticker)).values():
+            d = i.get("peer_deciles")
+            if not d or sum(d) < 30:
+                continue
+            share = max(d) / sum(d)
+            assert sum(d) == sum(d), "합계가 안 맞습니다"
+            if worst is None or share > worst[0]:
+                worst = (share, i["id"], d)
+    assert worst, "검사할 분포가 없습니다"
+    share, ind_id, d = worst
+    assert share < 0.85, f"{ind_id}: 한 칸에 {share:.0%} 가 몰렸습니다 {d}"
+
+
 # --------------------------------------------------------- DB 연결
 @check("DB — 못 쓸 상태면 알 수 없는 SQL 에러 대신 할 일을 알려줍니다")
 def _():

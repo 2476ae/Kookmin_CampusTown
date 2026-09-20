@@ -284,12 +284,30 @@ class Engine:
 
     @staticmethod
     def _deciles(arr):
-        lo, hi = min(arr), max(arr)
+        """업종 분포 히스토그램 10칸. 양 끝 5%를 잘라낸 범위에서 나눕니다.
+
+        최소~최대로 나누면 실데이터에서 막대 하나만 남습니다 — 재무비율에는
+        영업이익률 -10000% 같은 극단값이 섞여 있어서 나머지가 전부 한 칸에
+        뭉갭니다 (실측: 222개 중 218개가 한 칸). 가짜 데이터는 정규분포라
+        안 보였습니다.
+
+        잘라낸 바깥 값은 첫/마지막 칸에 넣습니다. 합계는 len(arr) 그대로라
+        "이 막대에 몇 개" 가 계속 맞습니다.
+        """
+        if not arr:
+            return [0] * 10
+        srt = sorted(arr)
+        q = lambda p: srt[min(len(srt) - 1, int(len(srt) * p))]
+        # Tukey 울타리. 5~95% 절단으로는 부족했습니다 — 영업이익률처럼 한쪽으로
+        # 심하게 쏠린 분포는 p5 자체가 극단값이라 나머지가 여전히 한 칸에 뭉갭니다.
+        q1, q3 = q(0.25), q(0.75)
+        iqr = q3 - q1
+        lo, hi = (q1 - 1.5 * iqr, q3 + 1.5 * iqr) if iqr > 0 else (q(0.05), q(0.95))
         if hi == lo:
             return [len(arr)] + [0] * 9
         out = [0] * 10
         for x in arr:
-            out[min(9, int((x - lo) / (hi - lo) * 10))] += 1
+            out[max(0, min(9, int((x - lo) / (hi - lo) * 10)))] += 1
         return out
 
     # -- 점수 -------------------------------------------------------------
