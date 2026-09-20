@@ -152,33 +152,81 @@ def _fmt(v, unit):
     return f"{v * 100:.1f}%" if unit == "ratio" else f"{v:.1f}배"
 
 
+REQUIRED_TABLES = {"company", "annual_fact", "price_snapshot", "macro"}
+
+
 class Engine:
+    """DB를 시작할 때 통째로 메모리에 올리고, 연결은 닫습니다.
+
+    연결을 들고 있을 이유가 없습니다 — 적재 후에는 DB를 다시 읽지 않습니다.
+    닫아두면 두 가지가 공짜로 해결됩니다:
+      - sqlite3 연결을 다른 스레드에서 쓰는 사고가 구조적으로 불가능해집니다
+        (실제로 한 번 터졌습니다: 서버가 요청마다 스레드를 바꿉니다)
+      - Windows 에서 파일이 잠기지 않아, 서버를 켜둔 채로 담당 ①이 DB를 다시
+        만들 수 있습니다. 서버는 재시작 전까지 옛 데이터를 그대로 서빙합니다.
+
+    5,800종목 실측 추정: 적재 약 1초, 메모리 약 36MB.
+    """
+
     def __init__(self, db):
-        self.conn = sqlite3.connect(db)
-        self.conn.row_factory = sqlite3.Row
+        self.db = pathlib.Path(db)
         self._load()
 
+    def _open(self):
+        """DB를 열되, 못 쓸 상태면 무슨 일인지 알려주고 멈춥니다.
+
+        ETL 도중인 파일을 열면 'no such table: company' 라는 알 수 없는 SQL
+        에러로 서버가 죽습니다. 담당 ①이 반드시 밟을 상황이라 먼저 잡습니다.
+        """
+        if not self.db.exists():
+            raise RuntimeError(
+                f"DB 파일이 없습니다: {self.db}\n"
+                f"  가짜 DB로 돌리려면 : python scoring/fake_db.py\n"
+                f"  실DB를 쓰려면      : data/stocks.db 에 파일을 놓으세요")
+        conn = sqlite3.connect(self.db)
+        conn.row_factory = sqlite3.Row
+        have = {r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+        missing = REQUIRED_TABLES - have
+        if missing:
+            conn.close()
+            raise RuntimeError(
+                f"DB에 테이블이 없습니다: {self.db}\n"
+                f"  없는 테이블 : {sorted(missing)}\n"
+                f"  ETL이 아직 안 끝났거나 contracts/db_schema.sql 로 만들어지지 "
+                f"않은 파일입니다")
+        return conn
+
     def _load(self):
-        self.company = {r["cik"]: dict(r) for r in self.conn.execute("SELECT * FROM company")}
-        self.by_ticker = {c["ticker"]: c["cik"] for c in self.company.values()}
+        conn = self._open()
+        try:
+            self.company = {r["cik"]: dict(r) for r in conn.execute("SELECT * FROM company")}
+            self.by_ticker = {c["ticker"]: c["cik"] for c in self.company.values()}
 
-        facts = {}
-        for r in self.conn.execute("SELECT cik, fiscal_year, metric, value FROM annual_fact"):
-            facts.setdefault(r["cik"], {}).setdefault(r["fiscal_year"], {})[r["metric"]] = r["value"]
+            facts = {}
+            for r in conn.execute("SELECT cik, fiscal_year, metric, value FROM annual_fact"):
+                facts.setdefault(r["cik"], {}).setdefault(
+                    r["fiscal_year"], {})[r["metric"]] = r["value"]
 
-        self.fiscal_year = {cik: max(y) for cik, y in facts.items() if y}
+            self.fiscal_year = {cik: max(y) for cik, y in facts.items() if y}
 
-        self.price = {}
-        for r in self.conn.execute(
-                "SELECT * FROM price_snapshot "
-                "WHERE asof = (SELECT max(asof) FROM price_snapshot)"):
-            self.price[r["ticker"]] = dict(r)
+            self.price = {}
+            for r in conn.execute(
+                    "SELECT * FROM price_snapshot "
+                    "WHERE asof = (SELECT max(asof) FROM price_snapshot)"):
+                self.price[r["ticker"]] = dict(r)
 
-        # 거시도 여기서 올립니다. 요청 시점에 conn 을 건드리면 스레드가 바뀔 때 터집니다
-        # (sqlite3 연결은 생성한 스레드에서만 쓸 수 있습니다).
-        self.macro = {r["series_id"]: r["value"] for r in self.conn.execute(
-            "SELECT series_id, value FROM macro "
-            "WHERE date = (SELECT max(date) FROM macro)")}
+            self.macro = {r["series_id"]: r["value"] for r in conn.execute(
+                "SELECT series_id, value FROM macro "
+                "WHERE date = (SELECT max(date) FROM macro)")}
+        finally:
+            conn.close()   # 적재 끝. 이후 DB를 다시 읽지 않습니다.
+
+        if not self.company:
+            raise RuntimeError(
+                f"DB에 종목이 하나도 없습니다: {self.db}\n"
+                f"  ETL이 아직 안 끝난 것 같습니다. 빈 DB로 서버를 띄우면 "
+                f"모든 조회가 not_found 가 됩니다")
 
         # 전 종목 × 전 지표를 한 번에 계산해둡니다. 백분위는 이 행렬 위에서 냅니다.
         self.values = {}

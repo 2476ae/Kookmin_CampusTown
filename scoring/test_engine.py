@@ -188,6 +188,51 @@ def _():
             assert sum(i["peer_deciles"]) <= n, f"{i['id']} 가 다른 모집단을 씁니다"
 
 
+# --------------------------------------------------------- DB 연결
+@check("DB — 못 쓸 상태면 알 수 없는 SQL 에러 대신 할 일을 알려줍니다")
+def _():
+    import sqlite3
+    import tempfile
+
+    schema = (ROOT / "contracts" / "db_schema.sql").read_text(encoding="utf-8")
+
+    def expect(setup, must_contain):
+        d = pathlib.Path(tempfile.mkdtemp()) / "t.db"
+        setup(d)
+        try:
+            Engine(d)
+        except RuntimeError as ex:
+            assert must_contain in str(ex), f"{must_contain!r} 가 없습니다 / 실제: {ex!r}"
+        except Exception as ex:
+            raise AssertionError(f"RuntimeError 가 아니라 {type(ex).__name__}: {ex}")
+        else:
+            raise AssertionError("못 쓸 DB 인데 통과했습니다")
+
+    # 담당 ① 이 ETL 도중이면 파일은 있는데 테이블이 없습니다. 반드시 밟는 상황입니다.
+    expect(lambda p: None, "DB 파일이 없습니다")
+    expect(lambda p: p.write_bytes(b""), "테이블이 없습니다")
+
+    def schema_only(p):
+        c = sqlite3.connect(p)
+        c.executescript(schema)
+        c.close()
+    expect(schema_only, "종목이 하나도 없습니다")
+
+
+@check("DB — 적재 후 연결을 닫습니다 (스레드 사고 방지 + 파일 잠금 해제)")
+def _():
+    import shutil
+    import tempfile
+
+    tmp = pathlib.Path(tempfile.mkdtemp()) / "copy.db"
+    shutil.copy(DB, tmp)
+    e = Engine(tmp)
+    assert not hasattr(e, "conn"), (
+        "conn 이 남아 있습니다 — 다른 스레드에서 쓰면 터집니다 (실제로 한 번 터졌습니다)")
+    tmp.unlink()   # 잠겨 있으면 Windows 에서 PermissionError
+    assert e.score(sorted(e.by_ticker)[0])["score"] is not None, "파일을 지웠는데 엔진이 죽습니다"
+
+
 # ------------------------------------------------------- 계약 준수
 @check("계약 — 출력 키 구조가 contracts/score.example.json 과 같습니다")
 def _():

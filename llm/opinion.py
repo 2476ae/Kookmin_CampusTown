@@ -290,8 +290,9 @@ def generate(score, macro, price, on_progress=None):
 def load_context(engine, ticker):
     """점수 + 거시 + 가격. 셋 다 엔진이 시작할 때 올려둔 메모리에서 나옵니다.
 
-    여기서 engine.conn 을 쓰면 안 됩니다 — 서버가 요청마다 스레드를 바꾸는데
-    sqlite3 연결은 생성한 스레드에서만 유효합니다.
+    엔진은 적재 후 DB 연결을 닫으므로 여기서 DB를 다시 읽을 방법이 없습니다.
+    (서버가 요청마다 스레드를 바꾸는데 sqlite3 연결은 생성한 스레드 전용이라,
+    아예 들고 있지 않는 쪽이 안전합니다.)
     """
     return engine.score(ticker), engine.macro, engine.price.get(ticker) or {}
 
