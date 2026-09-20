@@ -73,6 +73,37 @@ DB : stocks.db (실데이터)
 metric 7개 × 연간치뿐입니다. 가짜 DB 가 296종목 4년치에 776KB 이니,
 5,800종목 10년치면 **50MB 안팎**입니다. 원본 zip 은 ETL 후 지워도 됩니다.
 
+### 커밋하는 것 / 안 하는 것
+
+| | 어디로 |
+|---|---|
+| `etl/` 스크립트 | **git 에 커밋합니다.** 이게 진짜 산출물입니다 |
+| `data/stocks.db` | 커밋 안 함. 아래 방법으로 전달 |
+| `data/raw/*.zip` | 커밋 안 함. ETL 후 삭제 |
+
+`git add data/stocks.db` 를 치면 git 이 거부하고 이유를 알려줍니다:
+
+```
+The following paths are ignored by one of your .gitignore files:
+data
+hint: Use -f if you really want to add them.
+```
+
+**`-f` 는 쓰지 마세요.** GitHub 은 100MB 넘는 파일을 아예 거부하고 50MB 부터 경고합니다.
+원본 zip(1.4GB)은 시도조차 실패합니다. 더 나쁜 건, 큰 파일이 한 번 git 히스토리에
+들어가면 나중에 지워도 히스토리에 남아서 저장소가 영구히 무거워진다는 점입니다.
+
+### DB 를 팀에 어떻게 넘기나
+
+**1. 각자 ETL 을 돌리는 게 기본입니다.** `etl/` 스크립트가 커밋돼 있으면
+다른 사람이 `python etl/build.py` 한 번으로 같은 DB 를 만듭니다.
+재현 가능하고 파일을 주고받을 필요가 없습니다. 이게 `etl/` 을 커밋하는 이유입니다.
+
+**2. 수집에 몇 시간 걸려서 매번 돌리기 싫다면** — 50MB 짜리 `stocks.db` 하나를
+드라이브·디스코드로 넘기거나 GitHub Release 에 첨부하세요
+(Release 첨부는 2GB 까지 되고 git 히스토리를 더럽히지 않습니다).
+받은 사람은 `data/stocks.db` 에 놓기만 하면 됩니다.
+
 ### 완료 기준
 
 ```sql
