@@ -28,7 +28,14 @@ import opinion as opinion_mod   # noqa: E402
 PORT = 8000
 # data/stocks.db 가 있으면 그걸, 없으면 data/fake.db. STOCKS_DB 로 덮어쓸 수 있습니다.
 DB = default_db()
-ENGINE = Engine(DB)             # 한 번만 적재.
+try:
+    ENGINE = Engine(DB)         # 한 번만 적재.
+except RuntimeError as _e:
+    # 스택 트레이스는 개발 지식 없는 사람에게 최악입니다. 할 일만 보여줍니다.
+    print("\n서버를 띄울 수 없습니다.\n")
+    print(_e)
+    print()
+    raise SystemExit(1)
 
 
 class Handler(BaseHTTPRequestHandler):
