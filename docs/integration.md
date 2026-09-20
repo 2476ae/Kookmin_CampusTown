@@ -10,14 +10,51 @@
 
 ---
 
+## 0. DB 를 어떻게 받나 — 두 가지 길
+
+**담당 ① 의 3.2GB DuckDB 는 받을 필요가 없습니다.** 그건 분석용이고,
+서빙에 필요한 건 거기서 뽑아낸 8MB 짜리 `stocks.db` 입니다.
+
+### A. 직접 만든다 (담당 ① 에게 CSV 하나만 받으면 됨)
+
+SEC 원본은 공개라 누구나 받을 수 있습니다. 분기 zip 2~4개(각 65~85MB)면 됩니다.
+
+```bash
+curl -O https://www.sec.gov/files/dera/data/financial-statement-data-sets/2026q1.zip
+curl -O https://www.sec.gov/files/dera/data/financial-statement-data-sets/2025q4.zip
+python etl/export_to_contract.py --from-zip 2026q1.zip 2025q4.zip --out data/stocks.db
+python etl/fill_dummy_prices.py data/stocks.db
+python scoring/check_db.py data/stocks.db
+```
+
+담당 ① 에게 받을 건 **상장폐지 CSV 하나뿐**입니다 (`cik,delisted_date`, 수십 KB).
+그게 없으면 S6 배지가 안 뜹니다. `--delisted delisted.csv` 로 넣습니다.
+
+### B. 담당 ① 이 만들어서 보낸다
+
+`stocks.db` 파일 하나 (분기 2개 기준 **8MB**, gzip 2MB).
+카톡·메일·디스코드로 그냥 보내집니다. 링크가 필요하면 GitHub Release 첨부.
+**받으면 반드시 `python scoring/check_db.py data/stocks.db` 를 돌리세요** —
+전송 중 깨졌는지, 버전이 맞는지 한 번에 나옵니다.
+
+---
+
 ## 1. 담당 ① — DB 내보내기
 
 ```bash
-python etl/export_to_contract.py --from-zip 2026q1.zip --out data/stocks.db
+python etl/export_to_contract.py --from-zip 2026q1.zip 2025q4.zip --out data/stocks.db
 ```
 
-DuckDB 를 쓰고 있으면 `_read_zip()` 만 SELECT 로 바꾸면 됩니다.
-실제 SEC 2026q1 으로 검증했습니다 — **4,244종목 / 68,115행**.
+DuckDB 를 쓰고 있으면 `_read_zips()` 만 SELECT 로 바꾸면 됩니다.
+실제 SEC 데이터로 검증했습니다:
+
+| 넣은 분기 | 종목 | 재무 행 | 티커 매칭 |
+|---|---|---|---|
+| 2026q1 | 4,244 | 68,115 | 3,790 |
+| 2026q1 + 2025q4 | **4,584** | **73,799** | **4,090** |
+
+분기 하나로도 과거 비교수치 덕에 **2009~2026** 이 나옵니다. 분기를 더 넣으면
+연도가 아니라 **회사 수**가 늘어납니다 (회계연도 말이 다른 회사들).
 
 **조용히 틀리는 세 곳** (에러가 안 나서 위험합니다):
 

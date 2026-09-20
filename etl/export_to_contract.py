@@ -144,19 +144,24 @@ def load_delisted(path):
     return out
 
 
-def _read_zip(path):
-    """SEC Financial Statement Data Sets 분기 zip 에서 바로 읽습니다.
+def _read_zips(paths):
+    """SEC Financial Statement Data Sets 분기 zip 들에서 읽습니다.
+
+    분기 하나로도 과거 비교수치 덕에 18년치가 나오지만, **회사 수**는 그 분기에
+    10-K 를 낸 곳으로 제한됩니다 (2026q1 단독 = 4,244개). 회계연도 말이 다른
+    회사들을 잡으려면 최근 4개 분기를 같이 넣는 게 좋습니다.
 
     담당 ① 처럼 이미 DuckDB 에 적재했다면 이 함수 대신 SELECT 를 쓰세요:
-        con.execute("SELECT adsh, cik, name, sic, form, period, fy FROM sub").fetchall()
+        con.execute("SELECT adsh, cik, name, sic, form, period, filed FROM sub").fetchall()
         con.execute("SELECT adsh, tag, ddate, qtrs, uom, segments, coreg, value FROM num")
     """
-    z = zipfile.ZipFile(path)
+    zips = [zipfile.ZipFile(p) for p in paths]
 
     def rows(name):
-        with z.open(name) as f:
-            yield from csv.DictReader(io.TextIOWrapper(f, "utf-8", errors="replace"),
-                                      delimiter="\t")
+        for z in zips:
+            with z.open(name) as f:
+                yield from csv.DictReader(io.TextIOWrapper(f, "utf-8", errors="replace"),
+                                          delimiter="\t")
     return rows("sub.txt"), rows("num.txt")
 
 
@@ -168,13 +173,18 @@ def build(sub_rows, num_rows, out, tickers=None, sic_desc=None, delisted=None):
     conn.executescript((ROOT / "contracts" / "db_schema.sql").read_text(encoding="utf-8"))
 
     # --- 1) 10-K 제출만. adsh -> (cik, 회계연도) -----------------------
-    subs, companies = {}, {}
+    subs, companies, filed = {}, {}, {}
     for r in sub_rows:
         if r["form"] != "10-K":
             continue
         cik = r["cik"].zfill(10)          # 계약은 10자리 0패딩
         subs[r["adsh"]] = cik
-        companies[cik] = {"name": r["name"], "sic": (r["sic"] or "").strip() or None}
+        filed[r["adsh"]] = r.get("filed", "")
+        # 여러 분기를 넣으면 같은 회사가 여러 번 옵니다. 최신 제출을 씁니다.
+        prev = companies.get(cik)
+        if prev is None or r.get("filed", "") >= prev["filed"]:
+            companies[cik] = {"name": r["name"], "sic": (r["sic"] or "").strip() or None,
+                              "filed": r.get("filed", "")}
 
     # --- 2) num -> 정규화된 metric ------------------------------------
     # 같은 (cik, 연도, metric) 에 여러 태그가 오면 우선순위가 높은 태그가 이깁니다.
@@ -197,8 +207,10 @@ def build(sub_rows, num_rows, out, tickers=None, sic_desc=None, delisted=None):
             continue
         year = int(r["ddate"][:4])
         key = (cik, year, metric)
-        rank = TAG_RANK[r["tag"]]
-        if key not in facts or rank < chosen[key]:
+        # (최신 제출일, 태그 우선순위) 로 고릅니다. 여러 분기를 넣으면 같은
+        # (회사·연도·지표) 가 여러 번 오는데, 나중 제출이 재작성을 반영합니다.
+        rank = (filed.get(r["adsh"], ""), -TAG_RANK[r["tag"]])
+        if key not in facts or rank > chosen[key]:
             facts[key] = (value, r["tag"])
             chosen[key] = rank
 
@@ -245,7 +257,8 @@ def build(sub_rows, num_rows, out, tickers=None, sic_desc=None, delisted=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--from-zip", help="SEC Financial Statement Data Sets 분기 zip")
+    ap.add_argument("--from-zip", nargs="+",
+                    help="SEC Financial Statement Data Sets 분기 zip (여러 개 가능)")
     ap.add_argument("--out", default=str(ROOT / "data" / "stocks.db"))
     ap.add_argument("--delisted", help="상장폐지 목록 CSV (cik,delisted_date). "
                                        "없으면 S6 경고 배지가 안 뜹니다")
@@ -261,7 +274,7 @@ def main():
         print("SEC 공개 파일 받는 중 (티커 매핑 523KB · SIC 설명 109KB, 캐시됨)…")
         tickers, sic_desc = load_tickers(raw), load_sic_desc(raw)
 
-    sub, num = _read_zip(a.from_zip)
+    sub, num = _read_zips(a.from_zip)
     stats = build(sub, num, a.out, tickers, sic_desc, load_delisted(a.delisted))
     print(f"{a.out}")
     for k, v in stats.items():
