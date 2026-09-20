@@ -98,8 +98,15 @@ python etl/export_to_contract.py --from-zip 2026q1.zip        --delisted deliste
 ## 2. 가격·거시가 아직 없으면 — 더미로 채웁니다
 
 ```bash
-python etl/fill_dummy_prices.py data/stocks.db
+python etl/fetch_macro.py data/stocks.db      # 거시는 진짜로 받습니다 (FRED, 키 불필요)
+python etl/fill_dummy_prices.py data/stocks.db  # 가격만 샘플
 ```
+
+**거시는 더미가 아닙니다.** FRED 에서 키 없이 받아집니다.
+처음엔 숫자를 박아넣었는데 전부 틀렸고(기준금리 4.25 → 실제 3.63,
+CPI 지수 332.8 을 상승률 3.1% 로 착각), 그 값이 LLM 을 거쳐 사용자에게
+"물가상승률은 3.1%" 로 나갔습니다. 근거를 대는 서비스에서 근거가 틀리면
+제품이 성립하지 않습니다.
 
 재무는 진짜, 가격만 샘플입니다. 그러면 **수익성·성장성·안정성 3축은 진짜**이고
 밸류에이션 축만 가짜입니다.

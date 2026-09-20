@@ -18,6 +18,11 @@ import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+# 한글 콘솔(cp949)에서 한글·em-dash 가 깨지거나 UnicodeEncodeError 로 죽습니다.
+# 출력이 파일·파이프로 넘어갈 때도 마찬가지라 여기서 한 번에 고정합니다.
+for _s in (sys.stdout, sys.stderr):
+    _s.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scoring"))
 sys.path.insert(0, str(ROOT / "llm"))

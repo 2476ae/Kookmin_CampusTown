@@ -64,8 +64,9 @@ def fill(db):
              close * rnd.uniform(.85, 1.15), aligned))
         made += 1
 
-    for sid, val in (("FEDFUNDS", 4.25), ("CPIAUCSL", 3.1), ("UNRATE", 4.4)):
-        conn.execute("INSERT OR REPLACE INTO macro VALUES (?,?,?)", (sid, "2026-08-01", val))
+    # 거시는 여기서 안 만듭니다. 예전엔 숫자를 박아넣었는데 전부 틀렸고
+    # (CPI 지수를 상승률로 착각), 그 값이 LLM 을 거쳐 사용자에게 나갔습니다.
+    # FRED 는 키 없이 받아지니 etl/fetch_macro.py 를 쓰세요.
 
     conn.executemany("INSERT OR REPLACE INTO meta VALUES (?,?)", [
         ("price_source", "dummy"),
@@ -78,7 +79,7 @@ def fill(db):
     print(f"{db}")
     print(f"  가격 생성   {made:,}개")
     print(f"  건너뜀      {skipped:,}개 (자본 결측·자본잠식)")
-    print(f"  거시        3개 (FEDFUNDS / CPIAUCSL / UNRATE)")
+    print(f"  거시        건드리지 않음 -> python etl/fetch_macro.py 로 채우세요")
     print(f"  meta        price_source = dummy  -> 화면에 경고 배지가 뜹니다")
     print(f"\n다음: python scoring/check_db.py {db}")
     return 0

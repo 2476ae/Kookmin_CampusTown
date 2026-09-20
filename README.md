@@ -199,6 +199,7 @@ SIC 2자리 → ≥ 30 ? 사용
 python scoring/fake_db.py       # 가짜 DB 생성 (296종목, 예외 케이스 포함)
 python scoring/test_engine.py   # 점수 엔진 검사 16개
 python llm/test_opinion.py      # 의견 생성 + API 검사 10개
+python etl/fetch_macro.py       # 거시 지표 (FRED, 키 불필요)
 python scoring/check_db.py      # DB 가 계약을 지켰는지 (실DB 붙이기 전 필수)
 python api/server.py            # http://localhost:8000
 ```

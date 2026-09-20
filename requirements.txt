@@ -1,3 +1,6 @@
 # 의견 생성에만 필요합니다. 점수 엔진과 API 서버는 stdlib 만으로 돌아갑니다.
 # 주의: 구버전 openai(0.28 등)가 깔려 있으면 -U 없이는 갱신되지 않습니다.
 openai>=1.68
+
+# etl/fetch_macro.py 전용. urllib 는 FRED 의 WAF 에 막힙니다.
+requests>=2.31

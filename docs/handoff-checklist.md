@@ -30,7 +30,7 @@ con.execute("SELECT adsh, tag, ddate, qtrs, uom, segments, coreg, value FROM num
 | `company` | `cik` `ticker` `name` `sic` | `sic_desc` `exchange` 있으면 화면이 좋아집니다 |
 | `annual_fact` | `cik` `fiscal_year` `metric` `value` | **metric 은 아래 7개 이름만** |
 | `price_snapshot` | — | 비워두셔도 됩니다. 저희가 더미로 채웁니다 |
-| `macro` | — | 비워두셔도 됩니다 |
+| `macro` | — | 비워두세요. `etl/fetch_macro.py` 가 FRED 에서 받습니다 |
 
 `metric` 7개 — 이 철자 그대로여야 합니다:
 
