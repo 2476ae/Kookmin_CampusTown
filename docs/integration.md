@@ -30,6 +30,48 @@ python scoring/check_db.py data/stocks.db
 담당 ① 에게 받을 건 **상장폐지 CSV 하나뿐**입니다 (`cik,delisted_date`, 수십 KB).
 그게 없으면 S6 배지가 안 뜹니다. `--delisted delisted.csv` 로 넣습니다.
 
+### C. DB 가 있는 컴퓨터에서 통째로 돌린다  ← 지금 이 방법
+
+파일을 옮기지 않습니다. 저장소를 그 컴퓨터에 클론하고 거기서 띄웁니다.
+
+```bash
+git clone https://github.com/2476ae/Kookmin_CampusTown.git
+cd Kookmin_CampusTown
+pip install -U -r requirements.txt        # openai, requests
+pip install duckdb                        # DuckDB 에서 변환할 때만
+```
+
+`.env` 를 만듭니다 (`.env.example` 복사):
+
+```
+OPENAI_API_KEY=sk-...
+SEC_CONTACT_EMAIL=you@example.com
+```
+
+**DuckDB 에서 바로 변환합니다.** 테이블 이름이 `sub` / `num` 이면 그대로:
+
+```bash
+python etl/export_to_contract.py --from-duckdb <그컴퓨터의.duckdb> --out data/stocks.db
+```
+
+다르면 `--sub-table` / `--num-table` 로 알려주면 됩니다.
+전 컬럼 VARCHAR 로 적재돼 있어도 됩니다. 3.2GB 를 메모리에 다 올리지 않고
+5만 행씩 끊어 읽습니다.
+
+> 검증: 같은 SEC 데이터를 zip 경로와 DuckDB 경로로 각각 뽑아
+> **행 수와 SHA256 이 완전히 일치**하는 것을 확인했습니다
+> (4,584종목 / 73,799행).
+
+나머지는 같습니다:
+
+```bash
+python etl/apply_delisted.py delisted.csv data/stocks.db   # 상폐 목록이 별도 파일이면
+python etl/fetch_macro.py data/stocks.db
+python etl/fill_dummy_prices.py data/stocks.db             # 진짜 가격이 있으면 건너뛰세요
+python scoring/check_db.py data/stocks.db
+python api/server.py
+```
+
 ### B. 담당 ① 이 만들어서 보낸다
 
 `stocks.db` 파일 하나 (분기 2개 기준 **8MB**, gzip 2MB).

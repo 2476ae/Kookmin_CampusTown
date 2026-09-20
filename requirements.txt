@@ -4,3 +4,6 @@ openai>=1.68
 
 # etl/fetch_macro.py 전용. urllib 는 FRED 의 WAF 에 막힙니다.
 requests>=2.31
+
+# etl/export_to_contract.py --from-duckdb 를 쓸 때만. zip 경로에는 불필요.
+# duckdb>=1.0

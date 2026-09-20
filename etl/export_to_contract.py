@@ -1,7 +1,7 @@
 """SEC 원본(sub/num) → contracts/db_schema.sql 형식으로 내보냅니다.
 
-    python etl/export_to_contract.py --source <원본DB> --out data/stocks.db
-    python etl/export_to_contract.py --from-zip 2026q1.zip --out data/stocks.db
+    python etl/export_to_contract.py --from-duckdb sec.duckdb --out data/stocks.db
+    python etl/export_to_contract.py --from-zip 2026q1.zip 2025q4.zip --out data/stocks.db
 
 담당 ① 의 DuckDB 를 SQLite 로 바꾸라는 뜻이 아닙니다. 둘은 역할이 다릅니다:
   DuckDB   분석용. 78.6M행 스캔, 지표 실험
@@ -144,6 +144,35 @@ def load_delisted(path):
     return out
 
 
+def _read_duckdb(path, sub_table="sub", num_table="num"):
+    """담당 ① 의 DuckDB 에서 직접 읽습니다.
+
+        python etl/export_to_contract.py --from-duckdb sec.duckdb --out data/stocks.db
+
+    SEC Financial Statement Data Sets 를 그대로 적재했다면 테이블 이름만 맞으면
+    됩니다. 다르면 --sub-table / --num-table 로 알려주세요.
+
+    전 컬럼 VARCHAR 로 적재돼 있어도 됩니다 — 여기서 문자열로 받아 처리합니다.
+    3.2GB 를 통째로 메모리에 올리지 않게 청크로 가져옵니다.
+    """
+    import duckdb
+
+    con = duckdb.connect(str(path), read_only=True)
+
+    def rows(table, cols):
+        cur = con.execute(f"SELECT {', '.join(cols)} FROM {table}")
+        while True:
+            batch = cur.fetchmany(50_000)
+            if not batch:
+                return
+            for r in batch:
+                yield {c: ("" if v is None else str(v)) for c, v in zip(cols, r)}
+
+    return (rows(sub_table, ["adsh", "cik", "name", "sic", "form", "filed"]),
+            rows(num_table, ["adsh", "tag", "ddate", "qtrs", "uom",
+                             "segments", "coreg", "value"]))
+
+
 def _read_zips(paths):
     """SEC Financial Statement Data Sets 분기 zip 들에서 읽습니다.
 
@@ -259,14 +288,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--from-zip", nargs="+",
                     help="SEC Financial Statement Data Sets 분기 zip (여러 개 가능)")
+    ap.add_argument("--from-duckdb", help="담당 ① 의 DuckDB 파일")
+    ap.add_argument("--sub-table", default="sub", help="DuckDB 의 sub 테이블 이름")
+    ap.add_argument("--num-table", default="num", help="DuckDB 의 num 테이블 이름")
     ap.add_argument("--out", default=str(ROOT / "data" / "stocks.db"))
     ap.add_argument("--delisted", help="상장폐지 목록 CSV (cik,delisted_date). "
                                        "없으면 S6 경고 배지가 안 뜹니다")
     ap.add_argument("--no-fetch", action="store_true",
                     help="티커·SIC 설명을 SEC 에서 받지 않습니다 (오프라인)")
     a = ap.parse_args()
-    if not a.from_zip:
-        ap.error("--from-zip 을 주거나, DuckDB 를 쓰려면 _read_zip 을 SELECT 로 바꾸세요")
+    if not (a.from_zip or a.from_duckdb):
+        ap.error("--from-zip 또는 --from-duckdb 중 하나를 주세요")
 
     raw = ROOT / "data" / "raw"
     tickers = sic_desc = {}
@@ -274,7 +306,8 @@ def main():
         print("SEC 공개 파일 받는 중 (티커 매핑 523KB · SIC 설명 109KB, 캐시됨)…")
         tickers, sic_desc = load_tickers(raw), load_sic_desc(raw)
 
-    sub, num = _read_zips(a.from_zip)
+    sub, num = (_read_duckdb(a.from_duckdb, a.sub_table, a.num_table)
+                if a.from_duckdb else _read_zips(a.from_zip))
     stats = build(sub, num, a.out, tickers, sic_desc, load_delisted(a.delisted))
     print(f"{a.out}")
     for k, v in stats.items():
