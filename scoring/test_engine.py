@@ -24,7 +24,7 @@ E = Engine(DB)
 # fake_db.py 가 결정적으로 배치한 케이스들
 NORMAL, NEW_LISTING, LOSS = "35010", "35000", "35001"
 DELISTED, DELISTING_SOON, NO_PRICE, NEG_EQUITY = "35003", "35004", "35005", "35006"
-TINY_SIC = "38000"
+TINY_SIC, MID_SIC, ALL_MARKET = "38000", "36000", "09000"
 
 passed = []
 
@@ -156,12 +156,27 @@ def _():
 
 
 # ------------------------------------------------------- 폴백 사다리
-@check("폴백 — 표본이 모자라면 전체 시장까지 내려가고 라벨이 바뀝니다")
+@check("폴백 — 사다리 네 칸이 전부 실제로 밟힙니다")
 def _():
-    r = E.score(TINY_SIC)
-    assert r["peer_group"]["level"] == 0, "12개짜리 SIC인데 4자리를 그대로 썼습니다"
-    assert "전체 시장" in r["peer_group"]["label"], r["peer_group"]["label"]
-    assert r["peer_group"]["n"] > MIN_SAMPLE
+    # 처음엔 가짜 DB 의 SIC 가 2자리 접두사를 공유하지 않아서 3자리·2자리 칸이
+    # 한 번도 실행되지 않았습니다. 실데이터(3571/3572/3576)에서 처음 돌 뻔했습니다.
+    seen = {}
+    for ticker in E.by_ticker:
+        pg = E.score(ticker).get("peer_group")
+        if pg:
+            seen.setdefault(pg["level"], ticker)
+    for level in (4, 3, 2, 0):
+        assert level in seen, f"폴백 {level}단계가 한 번도 실행되지 않습니다"
+
+
+@check("폴백 — 단계마다 라벨이 달라집니다 (신뢰도가 다르니 화면에서 구분돼야 합니다)")
+def _():
+    for ticker, level, mark in ((TINY_SIC, 2, "대분류"), (MID_SIC, 3, "유사업종"),
+                                (ALL_MARKET, 0, "전체 시장")):
+        pg = E.score(ticker)["peer_group"]
+        assert pg["level"] == level, f"{ticker}: level {pg['level']} (기대 {level})"
+        assert mark in pg["label"], f"{ticker}: {pg['label']}"
+        assert pg["n"] > MIN_SAMPLE
 
 
 @check("폴백 — 모집단은 종목당 하나. 지표마다 다르면 '58개 중 26위'가 성립 안 합니다")

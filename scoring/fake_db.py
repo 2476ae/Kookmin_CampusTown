@@ -17,12 +17,29 @@ import random, sqlite3, pathlib
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SEED = 20260920  # 고정. 결정성 테스트가 이것에 의존합니다.
 
-# (sic, 설명, 회사수)
-SICS = [("3571", "Electronic Computers", 58),
-        ("7372", "Prepackaged Software", 80),
-        ("2834", "Pharmaceutical Preparations", 45),
-        ("1311", "Crude Petroleum & Natural Gas", 35),
-        ("3826", "Laboratory Analytical Instruments", 12)]  # 표본 부족 → 폴백
+# (sic, 설명, 회사수, 티커접두사)
+#
+# SIC 폴백 사다리(4자리 -> 3자리 -> 2자리 -> 전체)의 네 칸을 전부 밟게 배치합니다.
+# 처음엔 SIC 다섯 개가 2자리 접두사를 공유하지 않아서 4자리에서 곧장 전체 시장으로
+# 떨어졌고, 중간 두 칸이 한 번도 실행되지 않았습니다 — 실데이터에는 3571·3572·3576
+# 처럼 붙어 있는 업종이 널렸으니 거기서 처음 돌아갈 뻔했습니다.
+#
+# 티커 접두사는 SIC 와 무관하게 유일해야 합니다. sic[:2] 를 쓰면 3571 과 3572 가
+# 둘 다 "35" 가 되어 충돌합니다.
+SICS = [("3571", "Electronic Computers", 58, "35"),          # 4자리로 충분
+        ("7372", "Prepackaged Software", 80, "73"),
+        ("2834", "Pharmaceutical Preparations", 45, "28"),
+        ("1311", "Crude Petroleum & Natural Gas", 35, "13"),
+        # 357x: 개별로는 30 미만이지만 3자리(357)로 묶으면 넘습니다 -> 3자리 폴백
+        ("3572", "Computer Storage Devices", 14, "36"),
+        ("3576", "Computer Communications Equipment", 12, "37"),
+        # 38xx: 3자리로도 모자라고 2자리(38)에서야 넘습니다 -> 2자리 폴백
+        ("3826", "Laboratory Analytical Instruments", 12, "38"),
+        ("3812", "Search & Navigation Equipment", 11, "39"),
+        ("3844", "X-Ray Apparatus", 10, "40"),
+        ("3861", "Photographic Equipment", 10, "41"),
+        # 어디에도 안 붙는 업종 -> 전체 시장 폴백
+        ("0912", "Fish & Seafood", 9, "09")]
 
 YEARS = (2022, 2023, 2024, 2025)
 
@@ -36,11 +53,11 @@ def build(path=None):
 
     rnd = random.Random(SEED)
     n = 0
-    for sic, desc, count in SICS:
+    for sic, desc, count, prefix in SICS:
         for i in range(count):
             n += 1
             cik = f"{n:010d}"
-            tick = f"{sic[:2]}{i:03d}"
+            tick = f"{prefix}{i:03d}"
             # 예외 케이스를 결정적으로 배치
             kind = "normal"
             if i == 0 and sic == "3571": kind = "new_listing"      # 2년치만
