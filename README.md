@@ -148,7 +148,8 @@ SIC 2자리 → ≥ 30 ? 사용
 | **SEC `submissions.zip`** | SIC 업종 · 거래소 · 티커 | 사용 | 1,564,656,199 B. **companyfacts엔 SIC가 없습니다** |
 | **SEC `form.idx` → Form 25** | 상장폐지 이벤트 | 사용 | Notification of Removal from Listing. **2026 Q2 한 분기 517건**. 인증 불필요 |
 | **FRED API** | 거시 지표 | 사용 | 금리 · CPI · 실업률. 화면 상단 컨텍스트 전용 |
-| **야후 chart API** | 가격 · 이동평균 | 사용 | `query1.finance.yahoo.com/v8/finance/chart/{TICKER}`. yfinance 불필요, `User-Agent`만 |
+| **야후 chart API** | 가격 · 이동평균 | 사용 (**프로토타입 한정**) | Yahoo 약관이 "personal · non-transferable · revocable" 이라 **공개 서비스로 전환 시 교체 필요**. 무료 대안도 전부 같은 제약이라(Massive "Individual use" · Stooq 봇차단 · Alpha Vantage 하루 25콜) 소스 교체가 아니라 유료 라이선스 문제입니다. `price_snapshot` 테이블이 격리 경계라 교체해도 엔진·UI는 안 바뀝니다 — [상세](docs/reply-price-source-and-score-axes.md) |
+| **SEC `companyconcept`** | 발행주식수 | 사용 | `dei:EntityCommonStockSharesOutstanding`. 시가총액의 절반은 SEC 가 공짜로 줍니다 (AAPL 14,594,180,000주 확인) |
 | ~~DART OpenAPI~~ | 국내 상장폐지 | **불가** | DS001 엔드포인트 4개 중 없음. 기업개황 17개 필드에도 상장상태 없음 (`corp_cls`는 Y/K/N/E 시장구분) |
 | ~~KRX data.krx.co.kr~~ | 국내 상장폐지 | **불가** | 쿠키 세션 붙여도 `getJsonData.cmd` → `LOGOUT` |
 | ~~data.go.kr KRX상장종목정보~~ | 국내 상장 목록 | **부적합** | 상장폐지일 없음. **제3자 재배포 금지** 조항 — 웹서비스 제공 시 약관 위반 |
