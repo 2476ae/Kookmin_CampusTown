@@ -193,7 +193,8 @@ def _():
 def _():
     ex = json.loads((ROOT / "contracts" / "score.example.json").read_text(encoding="utf-8"))
     got = E.score(NORMAL)
-    missing = set(ex) - set(got)
+    # _ 로 시작하는 키는 계약이 아니라 내부 표시입니다 (_note, _dropped_evidence).
+    missing = {k for k in set(ex) - set(got) if not k.startswith("_")}
     assert not missing, f"계약에 있는데 엔진이 안 내는 키: {missing}"
     ax_missing = set(ex["axes"][0]) - set(got["axes"][0])
     assert not ax_missing, f"축에서 빠진 키: {ax_missing}"

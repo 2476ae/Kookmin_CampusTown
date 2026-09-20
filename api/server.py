@@ -22,12 +22,13 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scoring"))
 sys.path.insert(0, str(ROOT / "llm"))
 
-from engine import Engine       # noqa: E402
+from engine import Engine, default_db  # noqa: E402
 import opinion as opinion_mod   # noqa: E402
 
 PORT = 8000
-DB = ROOT / "data" / "fake.db"
-ENGINE = Engine(DB)             # 한 번만 적재. 230종목 11ms.
+# data/stocks.db 가 있으면 그걸, 없으면 data/fake.db. STOCKS_DB 로 덮어쓸 수 있습니다.
+DB = default_db()
+ENGINE = Engine(DB)             # 한 번만 적재.
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -127,5 +128,6 @@ if __name__ == "__main__":
     print(f"http://localhost:{PORT}")
     print(f"  LLM: {opinion_mod.MODEL + ' 실제 호출' if live else '목 모드 ('
                     + opinion_mod.API_KEY_ENV + ' 없음)'}")
+    print(f"  DB : {DB.name} ({'실데이터' if DB.name != 'fake.db' else '가짜 데이터'})")
     print(f"  종목 {len(ENGINE.by_ticker)}개 · 예: {sorted(ENGINE.by_ticker)[:5]}")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()

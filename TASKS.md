@@ -46,6 +46,33 @@
 
 5. **FRED → `macro`** — `FEDFUNDS`, `CPIAUCSL`, `UNRATE` 정도면 충분
 
+
+### 어디에 저장하나
+
+```
+data/                      <- 통째로 .gitignore. 절대 커밋되지 않습니다
+├── stocks.db              <- 담당 ① 의 산출물. 파일만 있으면 자동으로 이게 쓰입니다
+├── fake.db                <- 가짜 DB (scoring/fake_db.py 가 생성)
+└── raw/                   <- 내려받은 원본. ETL 끝나면 지워도 됩니다
+    ├── companyfacts.zip   (1.4GB)
+    └── submissions.zip    (1.56GB)
+```
+
+**`data/stocks.db` 로만 만들어 주세요.** 그 이름이면 서버·엔진·의견 생성이
+코드 한 줄 안 고치고 바로 붙습니다. `default_db()` 가 stocks.db 를 먼저 찾고
+없으면 fake.db 로 떨어집니다. 실DB를 두고 가짜로 돌려보고 싶으면
+`STOCKS_DB=data/fake.db` 로 덮어쓰면 됩니다.
+
+서버를 띄우면 어느 쪽을 쓰는지 찍힙니다:
+
+```
+DB : stocks.db (실데이터)
+```
+
+**크기 걱정은 안 하셔도 됩니다.** 원본 zip 이 3GB 지만 우리가 쓰는 건
+metric 7개 × 연간치뿐입니다. 가짜 DB 가 296종목 4년치에 776KB 이니,
+5,800종목 10년치면 **50MB 안팎**입니다. 원본 zip 은 ETL 후 지워도 됩니다.
+
 ### 완료 기준
 
 ```sql

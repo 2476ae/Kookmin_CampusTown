@@ -15,7 +15,7 @@ import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scoring"))
-from engine import Engine  # noqa: E402
+from engine import Engine, default_db  # noqa: E402
 
 PROVIDER = "openai"
 API_KEY_ENV = "OPENAI_API_KEY"
@@ -297,7 +297,6 @@ def load_context(engine, ticker):
 
 
 if __name__ == "__main__":
-    root = pathlib.Path(__file__).resolve().parent.parent
-    e = Engine(root / "data" / "fake.db")
+    e = Engine(default_db())
     s, m, p = load_context(e, sys.argv[1] if len(sys.argv) > 1 else "35010")
     print(json.dumps(generate(s, m, p), ensure_ascii=False, indent=2))

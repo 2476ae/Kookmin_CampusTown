@@ -9,9 +9,28 @@
   분모가 0 이하면 비율의 부호가 뒤집혀 '최고'로 읽힙니다 — 백분위 0점 고정.
       적자(PER) · 자본잠식(ROE·부채비율·PBR) 네 경우를 한 규칙이 덮습니다.
 """
+import os
 import pathlib
 import sqlite3
 from typing import NamedTuple
+
+DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
+
+
+def default_db():
+    """쓸 DB를 고릅니다. 실DB가 있으면 그걸, 없으면 가짜 DB.
+
+    담당 ①이 data/stocks.db 를 만들어 두면 코드를 한 줄도 안 고치고 바로 붙습니다.
+    STOCKS_DB 환경변수로 덮어쓸 수 있습니다 (실DB를 두고 가짜로 돌려보고 싶을 때).
+
+    data/ 는 통째로 .gitignore 되어 있습니다 — 커밋되지 않습니다.
+    """
+    env = os.environ.get("STOCKS_DB")
+    if env:
+        return pathlib.Path(env)
+    real = DATA_DIR / "stocks.db"
+    return real if real.exists() else DATA_DIR / "fake.db"
+
 
 MIN_SAMPLE = 30       # 백분위를 내기 위한 최소 유효표본
 MIN_INDICATORS = 5    # 이 개수 이상이 표본을 만족해야 그 SIC 레벨을 씁니다 (8개 중)
@@ -329,7 +348,6 @@ if __name__ == "__main__":
     import json
     import sys
 
-    root = pathlib.Path(__file__).resolve().parent.parent
-    engine = Engine(root / "data" / "fake.db")
+    engine = Engine(default_db())
     print(json.dumps(engine.score(sys.argv[1] if len(sys.argv) > 1 else "35010"),
                      ensure_ascii=False, indent=2))

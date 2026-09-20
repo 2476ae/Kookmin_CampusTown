@@ -195,7 +195,7 @@ SIC 2자리 → ≥ 30 ? 사용
 ## 돌려보기
 
 ```bash
-python scoring/fake_db.py       # 가짜 DB 생성 (230종목, 예외 케이스 포함)
+python scoring/fake_db.py       # 가짜 DB 생성 (296종목, 예외 케이스 포함)
 python scoring/test_engine.py   # 점수 엔진 검사 16개
 python llm/test_opinion.py      # 의견 생성 + API 검사 10개
 python api/server.py            # http://localhost:8000
@@ -205,6 +205,10 @@ python api/server.py            # http://localhost:8000
 GET /api/score?ticker=35010     단순 JSON · 즉시 (실측 0.2ms)
 GET /api/opinion?ticker=35010   SSE · score -> status -> delta -> opinion -> done
 ```
+
+DB는 `data/` 에 둡니다 (통째로 `.gitignore`). `data/stocks.db` 가 있으면 그걸 쓰고,
+없으면 `data/fake.db` 로 떨어집니다 — 담당 ①의 실DB가 들어오면 코드를 안 고쳐도
+자동으로 붙습니다. `STOCKS_DB` 로 덮어쓸 수 있습니다.
 
 API 키 없이도 전부 돌아갑니다 (의견은 목 데이터). 실제 LLM을 쓰려면:
 
