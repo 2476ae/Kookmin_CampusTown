@@ -268,6 +268,13 @@ class Engine:
         return "", 0, peers, 0
 
     @staticmethod
+    def rank_noun(level):
+        """순위 문장의 주어. level 0 인데 '동종업계' 라고 쓰면 거짓말입니다 —
+        전체 시장 4,584개가 동종업계일 리 없습니다. LLM 이 그 문장을 그대로
+        받아 쓰기 때문에 화면과 글이 같이 틀립니다."""
+        return {4: "동종업계", 3: "유사업종", 2: "같은 대분류"}.get(level, "전체 시장")
+
+    @staticmethod
     def peer_label(level, sic_desc):
         """화면에 '동종업계 58개'와 '전체 시장 4,800개'는 신뢰도가 다릅니다. 구분해서 보여줘야 합니다."""
         return {4: sic_desc, 3: f"{sic_desc} (유사업종)",
@@ -407,8 +414,8 @@ class Engine:
             "ticker": ticker, "name": c["name"], "cik": cik, "asof": ASOF,
             "fiscal_year": self.fiscal_year.get(cik),
             "score": total,
-            "rank_text": (f"동종업계 {n}개 중 {rank}위 (상위 {100 - total}%)"
-                          if total is not None else None),
+            "rank_text": (f"{self.rank_noun(level)} {n}개 중 {rank}위 "
+                          f"(상위 {100 - total}%)" if total is not None else None),
             "delisting": {"delisted_date": delisted,
                           "status": "delisting_soon" if still_trading else "listed"},
             "peer_group": {"sic": prefix, "label": self.peer_label(level, c["sic_desc"]),

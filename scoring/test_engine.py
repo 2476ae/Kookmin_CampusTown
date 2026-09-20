@@ -288,6 +288,17 @@ def _():
         assert f"{n}개" in r["rank_text"] and f"상위 {100 - score}%" in r["rank_text"], r["rank_text"]
 
 
+@check("rank_text 가 비교군 단계와 말이 맞습니다")
+def _():
+    # 전체 시장 폴백인데 "동종업계 4,584개" 라고 쓰면 거짓말입니다.
+    # LLM 이 이 문장을 그대로 받아 쓰기 때문에 화면과 글이 같이 틀립니다.
+    for ticker, level, noun in ((NORMAL, 4, "동종업계"), (MID_SIC, 3, "유사업종"),
+                                (TINY_SIC, 2, "같은 대분류"), (ALL_MARKET, 0, "전체 시장")):
+        r = E.score(ticker)
+        assert r["peer_group"]["level"] == level, ticker
+        assert r["rank_text"].startswith(noun), f"{ticker} level {level}: {r['rank_text']}"
+
+
 @check("없는 종목은 조용히 에러를 냅니다 (예외로 죽지 않음)")
 def _():
     assert E.score("NOPE")["error"] == "not_found"
