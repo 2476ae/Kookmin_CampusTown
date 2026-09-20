@@ -219,6 +219,12 @@ class Engine:
             self.macro = {r["series_id"]: r["value"] for r in conn.execute(
                 "SELECT series_id, value FROM macro "
                 "WHERE date = (SELECT max(date) FROM macro)")}
+
+            # meta 는 선택입니다. 없으면 빈 dict — 예전 DB 도 그대로 돕니다.
+            try:
+                self.meta = {r["key"]: r["value"] for r in conn.execute("SELECT * FROM meta")}
+            except sqlite3.OperationalError:
+                self.meta = {}
         finally:
             conn.close()   # 적재 끝. 이후 DB를 다시 읽지 않습니다.
 
@@ -368,6 +374,11 @@ class Engine:
         if still_trading:
             flags.append({"id": "flag.delisting", "severity": "critical",
                           "text": f"{delisted} 상장폐지 예정 · 거래가 곧 중단됩니다"})
+        if self.meta.get("price_source") == "dummy":
+            # 가짜 가격으로 낸 PER·PBR 을 진짜처럼 보여주면 안 됩니다.
+            flags.append({"id": "flag.dummy_price", "severity": "warning",
+                          "text": "가격 데이터가 샘플입니다 — PER·PBR 은 실제 값이 아닙니다"})
+
         aligned = (self.price.get(ticker) or {}).get("aligned_days")
         if aligned and aligned >= 90:
             flags.append({"id": "flag.ma_late", "severity": "warning",

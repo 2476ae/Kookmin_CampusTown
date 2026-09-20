@@ -50,6 +50,7 @@ score:   { "id": "profitability.operating_margin", "percentile": 88, ... }
 | `valuation.pbr` | PBR |
 | `flag.delisting` | 상장폐지 경고 (Form 25) |
 | `flag.ma_late` | 이동평균 정배열 지속 경고 |
+| `flag.dummy_price` | **가격이 샘플 데이터** — PER·PBR 이 진짜가 아님 |
 | `macro.*` | FRED 거시 지표 (`macro.fed_funds` 등) |
 
 여기 없는 ID를 LLM이 만들어내면 UI는 무시하고 넘어갑니다. 화면이 깨지면 안 됩니다.

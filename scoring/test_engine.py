@@ -19,6 +19,12 @@ DB = ROOT / "data" / "fake.db"
 
 if not DB.exists():
     fake_db.build(DB)
+
+# 항상 가짜 DB 로 돕니다. 실DB(data/stocks.db)가 생기면 default_db() 가 그쪽을
+# 고르고 픽스처 티커(35010 등)가 없어서 검사가 통째로 깨집니다.
+import os  # noqa: E402
+os.environ["STOCKS_DB"] = str(DB)
+
 E = Engine(DB)
 
 # fake_db.py 가 결정적으로 배치한 케이스들

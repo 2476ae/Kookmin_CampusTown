@@ -85,3 +85,18 @@ CREATE TABLE macro (
     value     REAL NOT NULL,
     PRIMARY KEY (series_id, date)
 );
+
+-- ---------------------------------------------------------------
+-- 메타 (선택)
+--   이 테이블이 없어도 엔진은 돕니다. 있으면 화면이 데이터 출처를 표시합니다.
+--
+--   price_source = 'dummy' 로 넣으면 PER·PBR 이 가짜라는 뜻이고,
+--   엔진이 flag.dummy_price 경고를 붙입니다. 초보자에게 가짜 밸류에이션을
+--   진짜처럼 보여주면 안 됩니다.
+--
+--   권장 키: price_source ('yahoo' | 'dummy' | ...), built_at, note
+-- ---------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT
+);

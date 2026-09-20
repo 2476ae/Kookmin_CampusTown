@@ -1,0 +1,14 @@
+<!doctype html><html lang="ko"><meta charset="utf-8">
+<title>자리 표시</title>
+<body style="font-family:system-ui;padding:40px;max-width:720px">
+<h1>web/ 자리 표시</h1>
+<p>담당 ③ 가 이 파일을 덮어쓰면 됩니다. 서버가 <code>web/</code> 를 그대로 서빙합니다.</p>
+<p>API 는 같은 주소에 있습니다 — CORS 걱정 없이 상대경로로 부르면 됩니다:</p>
+<pre id="out">불러오는 중…</pre>
+<script>
+fetch('/api/score?ticker=' + (new URLSearchParams(location.search).get('t') || ''))
+  .then(r => r.json())
+  .then(d => out.textContent = JSON.stringify(d, null, 2).slice(0, 800))
+  .catch(e => out.textContent = e);
+</script>
+</body></html>

@@ -10,6 +10,7 @@ import json
 import pathlib
 import sys
 import threading
+import urllib.error
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -20,15 +21,22 @@ import fake_db          # noqa: E402
 import opinion as O     # noqa: E402
 from engine import Engine  # noqa: E402
 
-# 검사 묶음은 절대 실제 API를 치지 않습니다. 돈이 들고 네트워크를 탑니다.
-# opinion 을 import 하는 순간 .env 가 로드되므로, 진짜 키를 가진 사람이
-# 돌리면 API 검사가 실제 호출로 넘어갑니다. 여기서 끊습니다.
+# 검사 묶음은 주변 환경에 기대면 안 됩니다. 둘 다 여기서 못 박습니다.
 import os  # noqa: E402
+
+# 1) 절대 실제 API를 치지 않습니다. 돈이 들고 네트워크를 탑니다.
+#    opinion 을 import 하는 순간 .env 가 로드되므로 진짜 키가 살아납니다.
 os.environ.pop(O.API_KEY_ENV, None)
 
 DB = ROOT / "data" / "fake.db"
 if not DB.exists():
     fake_db.build(DB)
+
+# 2) 항상 가짜 DB 로 돕니다. 실DB(data/stocks.db)가 생기면 default_db() 가
+#    그쪽을 고르고, 픽스처 티커(35010 등)가 없어서 검사가 통째로 깨집니다.
+#    api.server 는 import 시점에 default_db() 를 부르므로 그 전에 박아야 합니다.
+os.environ["STOCKS_DB"] = str(DB)
+
 E = Engine(DB)
 
 NORMAL, NEW_LISTING, DELISTED = "35010", "35000", "35003"
@@ -154,6 +162,13 @@ def _():
         f"{O.API_KEY_ENV} 가 살아 있습니다 — 검사가 실제 API를 치고 돈을 씁니다")
 
 
+@check("검사가 실DB 존재 여부에 안 흔들립니다")
+def _():
+    import os
+    assert os.environ.get("STOCKS_DB") == str(DB), (
+        "STOCKS_DB 가 안 박혀 있습니다 — 실DB 가 생기면 검사가 통째로 깨집니다")
+
+
 @check("has_key — .env.example 플레이스홀더를 키로 착각하지 않습니다")
 def _():
     import os
@@ -257,6 +272,20 @@ def _():
         events = [ln[7:] for ln in body.splitlines() if ln.startswith("event: ")]
         assert events[0] == "score", f"점수가 제일 먼저 가야 합니다: {events[:3]}"
         assert "opinion" in events and events[-1] == "done", events
+
+        # web/ 정적 서빙 — 서버 하나로 화면까지 떠야 합니다
+        with urllib.request.urlopen(f"{base}/", timeout=10) as r:
+            home = r.read().decode("utf-8", "replace")
+        assert "<" in home or "endpoints" in home, home[:100]
+
+        # 경로 탈출 — web/ 밖 파일이 읽히면 안 됩니다
+        for evil in ("/../.env", "/..%2f.env", "/../../etc/passwd", "/../requirements.txt"):
+            try:
+                with urllib.request.urlopen(f"{base}{evil}", timeout=10) as r:
+                    body = r.read().decode("utf-8", "replace")
+                assert "OPENAI_API_KEY" not in body and "openai>=" not in body,                     f"경로 탈출로 {evil} 가 읽혔습니다"
+            except urllib.error.HTTPError:
+                pass   # 404 면 정상
 
         # S6 — 상폐 종목은 의견 생성을 건너뜁니다
         with urllib.request.urlopen(f"{base}/api/opinion?ticker={DELISTED}", timeout=15) as r:

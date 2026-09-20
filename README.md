@@ -238,6 +238,17 @@ pip install -U -r requirements.txt # -U 필수: 구버전 openai가 있으면 �
 점수는 결정적으로 나와 있어서 모델이 하는 계산이 없습니다.
 nano 급까지 내리는 건 권하지 않습니다 — 제품 가치의 절반이 용어 해설 문장입니다.
 
+## 셋이 붙일 때
+
+**[docs/integration.md](docs/integration.md)** — 10분짜리 통합 절차. 순서대로 치면 됩니다.
+
+```bash
+python etl/export_to_contract.py --from-zip 2026q1.zip --out data/stocks.db
+python etl/fill_dummy_prices.py data/stocks.db   # 가격이 아직 없으면
+python scoring/check_db.py data/stocks.db        # FAIL 이면 붙이지 마세요
+python api/server.py                             # 화면과 API 가 같이 뜹니다
+```
+
 ## 같이 만드는 법
 
 - **[TASKS.md](TASKS.md)** — 3명 작업 분담. 각자 서로 기다리지 않고 돌릴 수 있게 쪼개놨습니다.

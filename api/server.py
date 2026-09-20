@@ -26,6 +26,10 @@ from engine import Engine, default_db  # noqa: E402
 import opinion as opinion_mod   # noqa: E402
 
 PORT = 8000
+WEB = ROOT / "web"          # 담당 ③ 의 화면. 있으면 같이 서빙합니다.
+MIME = {".html": "text/html", ".css": "text/css", ".js": "text/javascript",
+        ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
+        ".ico": "image/x-icon", ".woff2": "font/woff2"}
 # data/stocks.db 가 있으면 그걸, 없으면 data/fake.db. STOCKS_DB 로 덮어쓸 수 있습니다.
 DB = default_db()
 try:
@@ -91,14 +95,38 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "ticker_required"}, 400)
             return self._opinion(ticker)
 
+        # 나머지는 web/ 에서 찾습니다. 서버 하나로 화면까지 뜨게 하려는 것 —
+        # 담당 ③ 가 index.html 을 따로 열 필요가 없습니다.
+        if self._serve_static(url.path):
+            return
+
         if url.path in ("/", "/index.html"):
             return self._json({
                 "endpoints": ["/api/score?ticker=", "/api/opinion?ticker="],
                 "tickers_sample": sorted(ENGINE.by_ticker)[:10],
-                "note": "담당 ③: contracts/*.example.json 대신 이 엔드포인트를 쓰면 됩니다.",
+                "note": "web/index.html 을 만들면 여기서 바로 뜹니다.",
             })
 
         self._json({"error": "not_found"}, 404)
+
+    def _serve_static(self, path):
+        if not WEB.is_dir():
+            return False
+        rel = path.lstrip("/") or "index.html"
+        target = (WEB / rel).resolve()
+        # 경로 탈출 방지 — ../.. 로 저장소 밖 파일을 읽히면 안 됩니다
+        if not target.is_relative_to(WEB.resolve()) or not target.is_file():
+            return False
+        body = target.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type",
+                         MIME.get(target.suffix, "application/octet-stream") + "; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")   # 프로토타입: 새로고침이 항상 먹게
+        self._cors()
+        self.end_headers()
+        self.wfile.write(body)
+        return True
 
     def _opinion(self, ticker):
         score = ENGINE.score(ticker)
@@ -137,4 +165,7 @@ if __name__ == "__main__":
                     + opinion_mod.API_KEY_ENV + ' 없음)'}")
     print(f"  DB : {DB.name} ({'실데이터' if DB.name != 'fake.db' else '가짜 데이터'})")
     print(f"  종목 {len(ENGINE.by_ticker)}개 · 예: {sorted(ENGINE.by_ticker)[:5]}")
+    print(f"  화면: {'web/ 서빙 중' if WEB.is_dir() else 'web/ 없음 (API 만)'}")
+    if ENGINE.meta.get("price_source") == "dummy":
+        print("  !! 가격이 샘플입니다 — PER·PBR 은 진짜가 아닙니다 (화면에 경고 배지가 뜹니다)")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
