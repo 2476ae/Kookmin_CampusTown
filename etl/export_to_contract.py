@@ -54,6 +54,96 @@ TAG_TO_METRIC = {t: m for m, tags in METRIC_TAGS.items() for t in tags}
 TAG_RANK = {t: i for tags in METRIC_TAGS.values() for i, t in enumerate(tags)}
 
 
+TICKERS_URL = "https://www.sec.gov/files/company_tickers_exchange.json"
+SIC_URL = ("https://www.sec.gov/corpfin/division-of-corporation-finance-"
+           "standard-industrial-classification-sic-code-list")
+def _user_agent():
+    """SEC 는 User-Agent 에 연락처를 요구합니다. 없으면 403 입니다.
+
+    저장소에 개인 이메일을 박지 않으려고 .env 에서 읽습니다 (.env 는 gitignore).
+        SEC_CONTACT_EMAIL=you@example.com
+    """
+    import os
+    sys.path.insert(0, str(ROOT / "llm"))
+    try:
+        from opinion import load_dotenv    # 프로젝트의 .env 로더를 그대로 씁니다
+        load_dotenv()
+    except Exception:
+        pass
+    email = os.environ.get("SEC_CONTACT_EMAIL", "").strip()
+    if "@" not in email:
+        raise SystemExit("\n".join([
+            "SEC 는 User-Agent 에 연락처 이메일을 요구합니다 (없으면 403).",
+            "  .env 에 한 줄 넣으세요:  SEC_CONTACT_EMAIL=you@example.com",
+            "  또는 --no-fetch 로 티커·SIC 설명 없이 내보내세요"]))
+    return f"Kookmin CampusTown Prototype {email}"
+
+
+def _fetch(url, cache):
+    """SEC 공개 파일을 받아 data/raw/ 에 캐시합니다 (523KB + 109KB)."""
+    cache = pathlib.Path(cache)
+    if cache.exists():
+        return cache.read_bytes()
+    import urllib.request
+    req = urllib.request.Request(url, headers={"User-Agent": _user_agent()})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        body = r.read()
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_bytes(body)
+    return body
+
+
+def load_tickers(cache_dir):
+    """cik -> {ticker, exchange, name}.
+
+    이게 없으면 화면에 CIK('0000320193')가 티커 자리에 뜹니다.
+    담당 ① 의 ticker_exchange 테이블과 같은 소스입니다 (10,438행).
+    """
+    import json
+    d = json.loads(_fetch(TICKERS_URL, pathlib.Path(cache_dir) / "company_tickers_exchange.json"))
+    idx = {f: i for i, f in enumerate(d["fields"])}
+    out = {}
+    for row in d["data"]:
+        cik = str(row[idx["cik"]]).zfill(10)
+        # 한 회사에 여러 티커가 있으면 먼저 온 것을 씁니다 (보통 보통주)
+        out.setdefault(cik, {"ticker": row[idx["ticker"]],
+                             "exchange": row[idx["exchange"]],
+                             "name": row[idx["name"]]})
+    return out
+
+
+def load_sic_desc(cache_dir):
+    """sic 코드 -> 설명. 없으면 비교군 라벨이 None 이 됩니다."""
+    import re
+    html = _fetch(SIC_URL, pathlib.Path(cache_dir) / "sic_codes.html").decode("utf-8", "replace")
+    out = {}
+    for row in re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S):
+        cells = [re.sub(r"<[^>]+>", "", c).strip()
+                 for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+        if len(cells) >= 3 and cells[0].isdigit():
+            out[cells[0]] = cells[-1].replace("&amp;", "&").title()
+    return out
+
+
+def load_delisted(path):
+    """상장폐지 목록. cik,delisted_date 두 컬럼짜리 CSV.
+
+    담당 ① 이 Form 25-NSE 에서 1,103건을 수집해뒀습니다. 그쪽이 ETF·우선주·SPAC 을
+    이미 걸러냈으니 여기서 다시 만들지 않습니다.
+    이게 없으면 **S6 상장폐지 경고 배지가 통째로 죽습니다.**
+    """
+    if not path:
+        return {}
+    out = {}
+    with open(path, encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            cik = (row.get("cik") or "").strip()
+            date = (row.get("delisted_date") or row.get("form25_date") or "").strip()
+            if cik and date:
+                out[cik.zfill(10)] = date
+    return out
+
+
 def _read_zip(path):
     """SEC Financial Statement Data Sets 분기 zip 에서 바로 읽습니다.
 
@@ -70,7 +160,7 @@ def _read_zip(path):
     return rows("sub.txt"), rows("num.txt")
 
 
-def build(sub_rows, num_rows, out, tickers=None):
+def build(sub_rows, num_rows, out, tickers=None, sic_desc=None, delisted=None):
     out = pathlib.Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.unlink(missing_ok=True)
@@ -126,30 +216,53 @@ def build(sub_rows, num_rows, out, tickers=None):
             filled += 1
 
     # --- 4) 쓰기 -------------------------------------------------------
+    tickers, sic_desc, delisted = tickers or {}, sic_desc or {}, delisted or {}
     used = {cik for cik, _, _ in facts}
+    matched = 0
     for cik in used:
         c = companies[cik]
-        t = (tickers or {}).get(cik, {})
+        t = tickers.get(cik, {})
+        if t:
+            matched += 1
         conn.execute("INSERT INTO company VALUES (?,?,?,?,?,?,?)",
-                     (cik, t.get("ticker", cik), c["name"], c["sic"],
-                      t.get("sic_desc"), t.get("exchange"), t.get("delisted_date")))
+                     (cik,
+                      t.get("ticker") or cik,          # 매핑이 없으면 CIK 가 그대로 들어갑니다
+                      t.get("name") or c["name"],      # 티커 파일 쪽 이름이 더 읽기 좋습니다
+                      c["sic"],
+                      sic_desc.get(c["sic"] or ""),
+                      t.get("exchange"),
+                      delisted.get(cik)))
     conn.executemany(
         "INSERT INTO annual_fact VALUES (?,?,?,?,?)",
         [(cik, year, metric, v, tag) for (cik, year, metric), (v, tag) in facts.items()])
     conn.commit()
     conn.close()
-    return {"companies": len(used), "facts": len(facts), "liabilities_filled": filled}
+    return {"companies": len(used), "facts": len(facts), "liabilities_filled": filled,
+            "ticker_matched": matched,
+            "sic_desc_filled": sum(1 for c in used if sic_desc.get(companies[c]["sic"] or "")),
+            "delisted_marked": sum(1 for c in used if c in delisted)}
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--from-zip", help="SEC Financial Statement Data Sets 분기 zip")
     ap.add_argument("--out", default=str(ROOT / "data" / "stocks.db"))
+    ap.add_argument("--delisted", help="상장폐지 목록 CSV (cik,delisted_date). "
+                                       "없으면 S6 경고 배지가 안 뜹니다")
+    ap.add_argument("--no-fetch", action="store_true",
+                    help="티커·SIC 설명을 SEC 에서 받지 않습니다 (오프라인)")
     a = ap.parse_args()
     if not a.from_zip:
         ap.error("--from-zip 을 주거나, DuckDB 를 쓰려면 _read_zip 을 SELECT 로 바꾸세요")
+
+    raw = ROOT / "data" / "raw"
+    tickers = sic_desc = {}
+    if not a.no_fetch:
+        print("SEC 공개 파일 받는 중 (티커 매핑 523KB · SIC 설명 109KB, 캐시됨)…")
+        tickers, sic_desc = load_tickers(raw), load_sic_desc(raw)
+
     sub, num = _read_zip(a.from_zip)
-    stats = build(sub, num, a.out)
+    stats = build(sub, num, a.out, tickers, sic_desc, load_delisted(a.delisted))
     print(f"{a.out}")
     for k, v in stats.items():
         print(f"  {k:20} {v:,}")

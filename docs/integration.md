@@ -29,6 +29,35 @@ DuckDB 를 쓰고 있으면 `_read_zip()` 만 SELECT 로 바꾸면 됩니다.
 
 `liabilities` 폴백(`assets - equity`)은 **필수**입니다 — 실측으로 4,244개 중 **1,130개(27%)** 가 필요했습니다.
 
+### 이 파일에 뭐가 들어 있나
+
+내보내기가 채우는 것 (SEC 2026q1 실측):
+
+| | 채움 | 없으면 |
+|---|---|---|
+| `cik` · `name` · 재무 7종 | 100% | — |
+| `sic` | 96% | 비교군을 못 만듭니다 |
+| `ticker` | 89% (나머지는 CIK) | 화면에 `0000320193` 이 뜹니다 |
+| `sic_desc` | 96% | 비교군 라벨이 `None` |
+| `exchange` | 89% | NASDAQ/NYSE 구분 불가 |
+| **`delisted_date`** | **0%** | **S6 상장폐지 배지가 통째로 죽습니다** |
+
+`ticker` · `sic_desc` · `exchange` 는 SEC 공개 파일에서 자동으로 받습니다
+(523KB + 109KB, `data/raw/` 에 캐시). SEC 가 User-Agent 에 연락처를 요구해서
+`.env` 에 한 줄이 필요합니다:
+
+```
+SEC_CONTACT_EMAIL=you@example.com
+```
+
+**`delisted_date` 는 담당 ① 의 목록이 있어야 합니다.** Form 25-NSE 에서
+1,103건을 이미 수집해뒀고 ETF·우선주·SPAC 도 걸러놨으니, `cik,delisted_date`
+두 컬럼 CSV 로 내보내서 넘겨주면 됩니다:
+
+```bash
+python etl/export_to_contract.py --from-zip 2026q1.zip        --delisted delisted.csv --out data/stocks.db
+```
+
 ## 2. 가격·거시가 아직 없으면 — 더미로 채웁니다
 
 ```bash
