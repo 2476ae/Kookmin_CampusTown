@@ -110,16 +110,28 @@ def _():
 
 
 # ------------------------------------------------------------ 스키마
-@check("스키마 — additionalProperties false 라 LLM이 필드를 못 늘립니다")
+@check("스키마 — OpenAI strict 모드 요건을 만족합니다")
 def _():
-    def walk(node):
+    # strict 모드는 additionalProperties:false 와 "모든 프로퍼티가 required" 를 요구합니다.
+    # 나중에 필드 하나 늘리고 required 에 안 넣으면 런타임에 400 이 납니다.
+    def walk(node, path="root"):
         if isinstance(node, dict):
             if node.get("type") == "object":
-                assert node.get("additionalProperties") is False, node.get("properties", {}).keys()
-                assert "required" in node
-            for v in node.values():
-                walk(v)
+                props = set(node.get("properties", {}))
+                req = set(node.get("required", []))
+                assert node.get("additionalProperties") is False, f"{path}: additionalProperties"
+                assert props == req, f"{path}: required 누락 {props - req}"
+            for k, v in node.items():
+                walk(v, f"{path}.{k}")
     walk(O.OPINION_SCHEMA)
+
+
+@check("제공자 설정이 한 군데에 모여 있습니다 (교체 비용)")
+def _():
+    assert O.PROVIDER == "openai" and O.API_KEY_ENV == "OPENAI_API_KEY"
+    src = (ROOT / "llm" / "opinion.py").read_text(encoding="utf-8")
+    assert "anthropic" not in src.lower(), "Anthropic 잔재가 남아 있습니다"
+    assert "claude" not in src.lower(), "Anthropic 잔재가 남아 있습니다"
 
 
 # --------------------------------------------------------------- API

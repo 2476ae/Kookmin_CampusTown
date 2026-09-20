@@ -17,8 +17,9 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scoring"))
 from engine import Engine  # noqa: E402
 
-MODEL = "claude-opus-5"
-MAX_TOKENS = 16000
+PROVIDER = "openai"
+MODEL = "gpt-5.6"
+API_KEY_ENV = "OPENAI_API_KEY"
 
 # 계약(contracts/README.md)에 있는 것만. LLM이 만들어낸 ID는 버립니다.
 FLAG_IDS = {"score.overall", "flag.delisting", "flag.ma_late"}
@@ -148,8 +149,8 @@ def mock_opinion(score):
                            f"낸 점수라 참고로만 보세요.",
                    "evidence": ["score.overall"], "terms": []}] if partial else [])},
             {"id": "concern", "title": "걸리는 것", "sentences": [
-                {"text": "이것은 목 데이터입니다. ANTHROPIC_API_KEY 를 설정하면 "
-                         "실제 LLM이 여기에 글을 씁니다.",
+                {"text": f"이것은 목 데이터입니다. {API_KEY_ENV} 를 설정하면 "
+                         f"{MODEL} 이 여기에 글을 씁니다.",
                  "evidence": ["score.overall"], "terms": []},
             ]},
         ],
@@ -159,39 +160,46 @@ def mock_opinion(score):
 
 
 # ---------------------------------------------------------------- 실제 호출
-def generate(score, macro, price, on_progress=None):
-    """스트리밍으로 의견을 생성합니다. on_progress(텍스트조각) 이 SSE로 흘러나갑니다.
+def has_key():
+    return bool(os.environ.get(API_KEY_ENV))
 
-    주의: ANTHROPIC_API_KEY 가 없으면 목 모드로 떨어집니다.
-    이 경로는 키가 없어 아직 실제로 실행해보지 못했습니다.
+
+def generate(score, macro, price, on_progress=None):
+    """OpenAI Responses API로 의견을 생성합니다.
+
+    on_progress(텍스트조각) 이 SSE의 delta 이벤트로 흘러나갑니다.
+    구조화 출력이라 흘러나오는 건 JSON 문자열입니다 — UI는 delta 를 진행 표시로만 쓰고,
+    렌더링은 마지막 opinion 이벤트의 파싱된 객체로 하세요.
+
+    키가 없으면 목 모드로 떨어집니다.
     """
-    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
+    if not has_key():
         return mock_opinion(score)
 
-    import anthropic
+    from openai import OpenAI
 
-    client = anthropic.Anthropic()
-    text = []
-    with client.beta.messages.stream(
+    client = OpenAI()
+    text, refusal = [], []
+    stream = client.responses.create(
         model=MODEL,
-        max_tokens=MAX_TOKENS,
-        system=SYSTEM,
-        thinking={"type": "adaptive"},
-        output_config={"format": {"type": "json_schema", "schema": OPINION_SCHEMA}},
-        betas=["server-side-fallback-2026-07-01"],
-        fallbacks="default",
-        messages=[{"role": "user", "content": build_prompt(score, macro, price)}],
-    ) as stream:
-        for event in stream:
-            if event.type == "content_block_delta" and event.delta.type == "text_delta":
-                text.append(event.delta.text)
-                if on_progress:
-                    on_progress(event.delta.text)
-        final = stream.get_final_message()
+        instructions=SYSTEM,
+        input=build_prompt(score, macro, price),
+        # strict 모드는 모든 프로퍼티가 required 여야 합니다. OPINION_SCHEMA 는 그렇게 짜여 있습니다.
+        text={"format": {"type": "json_schema", "name": "stock_opinion",
+                         "strict": True, "schema": OPINION_SCHEMA}},
+        stream=True,
+    )
+    for event in stream:
+        kind = getattr(event, "type", "")
+        if kind == "response.output_text.delta":
+            text.append(event.delta)
+            if on_progress:
+                on_progress(event.delta)
+        elif kind == "response.refusal.delta":
+            refusal.append(event.delta)
 
-    if final.stop_reason == "refusal":
-        return {"error": "refusal", "detail": getattr(final, "stop_details", None)}
-
+    if refusal:
+        return {"error": "refusal", "detail": "".join(refusal)}
     return sanitize(json.loads("".join(text)), score)
 
 

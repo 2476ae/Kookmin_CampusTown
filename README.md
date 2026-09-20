@@ -209,8 +209,8 @@ GET /api/opinion?ticker=35010   SSE · score -> status -> delta -> opinion -> do
 API 키 없이도 전부 돌아갑니다 (의견은 목 데이터). 실제 LLM을 쓰려면:
 
 ```bash
-export ANTHROPIC_API_KEY=...    # Windows PowerShell: $env:ANTHROPIC_API_KEY="..."
-pip install anthropic
+export OPENAI_API_KEY=...       # Windows PowerShell: $env:OPENAI_API_KEY="..."
+pip install openai
 ```
 
 ## 같이 만드는 법

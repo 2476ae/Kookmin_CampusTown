@@ -123,9 +123,9 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    import os
-    live = bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+    live = opinion_mod.has_key()
     print(f"http://localhost:{PORT}")
-    print(f"  LLM: {'실제 호출' if live else '목 모드 (ANTHROPIC_API_KEY 없음)'}")
+    print(f"  LLM: {opinion_mod.MODEL + ' 실제 호출' if live else '목 모드 ('
+                    + opinion_mod.API_KEY_ENV + ' 없음)'}")
     print(f"  종목 {len(ENGINE.by_ticker)}개 · 예: {sorted(ENGINE.by_ticker)[:5]}")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
