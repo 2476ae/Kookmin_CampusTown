@@ -18,8 +18,49 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scoring
 from engine import Engine  # noqa: E402
 
 PROVIDER = "openai"
-MODEL = "gpt-5.6"
 API_KEY_ENV = "OPENAI_API_KEY"
+
+
+def load_dotenv(path=None):
+    """프로젝트 루트의 .env 를 os.environ 에 채웁니다.
+
+    python-dotenv 를 안 쓰는 이유: 키 하나 읽자고 의존성을 늘릴 이유가 없습니다.
+    이미 설정된 환경변수가 이깁니다 (.env 가 셸 설정을 덮으면 디버깅이 괴로워집니다).
+
+    아래 MODEL 상수보다 먼저 호출돼야 합니다 — 순서가 뒤집히면 .env 의
+    OPENAI_MODEL 이 조용히 무시됩니다.
+    """
+    path = pathlib.Path(path or pathlib.Path(__file__).resolve().parent.parent / ".env")
+    if not path.exists():
+        return {}
+    loaded = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, val = line.removeprefix("export ").split("=", 1)
+        key, val = key.strip(), val.strip().strip('"').strip("'")
+        loaded[key] = val
+        os.environ.setdefault(key, val)
+    return loaded
+
+
+load_dotenv()
+
+# 이 작업은 이미 계산된 숫자를 평이한 한국어로 풀어쓰는 일입니다. 점수는 결정적으로
+# 나와 있어서 모델이 하는 계산이 없습니다 — 최상위 모델이 필요 없습니다.
+#
+# 2026-07-30 가격 인하 후 Luna 가 5-mini 보다 싸면서 세대는 더 위입니다.
+#   gpt-5.6-luna   $0.20 / $1.20   -> 우리 1건 약 3.2원
+#   gpt-5-mini     $0.25 / $2.00   -> 약 5원
+#   gpt-5.6-terra  $2.00 / $12.00  -> 우리 작업엔 과함
+#   gpt-5.6-sol    $4.00 / $20.00  -> 과함
+# nano 까지 내리지 않는 이유: 제품 가치의 절반이 용어 해설 문장인데 거기서 한국어가
+# 뻣뻣해집니다. 몇 원 아끼자고 제품을 망칠 이유가 없습니다.
+#
+# .env 에 OPENAI_MODEL 을 넣으면 코드를 안 고치고 바꿀 수 있습니다.
+DEFAULT_MODEL = "gpt-5.6-luna"
+MODEL = os.environ.get("OPENAI_MODEL") or DEFAULT_MODEL
 
 # 계약(contracts/README.md)에 있는 것만. LLM이 만들어낸 ID는 버립니다.
 FLAG_IDS = {"score.overall", "flag.delisting", "flag.ma_late"}
@@ -86,20 +127,38 @@ SYSTEM = """당신은 주식이 어려운 사람에게 미국 주식 종목을 �
 5. 계산할 수 없었던 지표(status가 insufficient_data)를 '나쁘다'고 쓰지 마세요.
    데이터가 없는 것과 수치가 낮은 것은 다릅니다. 필요하면 "알 수 없다"고 쓰세요.
 6. 축이 빠진 채로 낸 점수라면(score_basis) 그 사실을 한 문장으로 알려주세요.
+7. 같은 내용을 다른 섹션에서 반복하지 마세요. 채울 말이 없으면 문장 수를 줄이세요.
+   뜻 없는 문장("~라는 점은 확인할 필요가 있습니다")으로 분량을 채우지 마세요.
 
-섹션은 overall(한 줄로 말하면) · strength(잘하는 것) · concern(걸리는 것) ·
-context(지금 시장은) 순서로, 각 2~4문장."""
+섹션 (각 2~4문장, 이 순서):
+- overall  한 줄로 말하면 : 점수와 순위. 이 회사가 한마디로 어떤 상태인지.
+- strength 잘하는 것       : 동종업계 대비 나은 지표. 없으면 "특별히 나은 지표가 없다"고 쓰세요.
+- concern  걸리는 것       : 동종업계 대비 **나쁜** 지표만. 중앙값보다 좋은 수치를 여기 쓰지 마세요.
+                             걱정거리가 정말 없으면 "지금 데이터에서 눈에 띄는 약점은 없다"
+                             한 문장으로 끝내세요. 억지로 채우지 마세요.
+- context  지금 시장은     : **거시 지표만** 다루세요 (금리·물가·실업률). 종목 지표를
+                             다시 꺼내지 마세요. 금리가 이런 종목에 어떤 의미인지 한두 문장."""
+
+
+def macro_id(series_id):
+    """FRED 시리즈 ID -> 근거 ID. contracts/README.md 의 macro.* 형식."""
+    return f"macro.{series_id.lower()}"
 
 
 def build_prompt(score, macro, price):
-    """LLM에 넣을 입력. 점수는 이미 계산된 것을 그대로 넣습니다."""
-    allowed = sorted(collect_evidence_ids(score))
+    """LLM에 넣을 입력. 점수는 이미 계산된 것을 그대로 넣습니다.
+
+    거시 지표도 근거 ID를 붙여서 넘깁니다. 안 붙이면 모델이 규칙을 지키느라
+    거시를 아예 못 씁니다 — "이 목록 밖은 금지"라고 해놓고 목록에서 뺐었습니다.
+    """
+    macro_labelled = {macro_id(k): v for k, v in macro.items()}
+    allowed = sorted(collect_evidence_ids(score) | set(macro_labelled))
     return (
         f"## 종목\n{score['name']} ({score['ticker']})\n\n"
         f"## 점수 (확정됨 · 바꾸지 마세요)\n```json\n"
         f"{json.dumps(score, ensure_ascii=False, indent=2)}\n```\n\n"
-        f"## 거시 지표 (참고용 · 종목 점수에는 안 들어갑니다)\n```json\n"
-        f"{json.dumps(macro, ensure_ascii=False)}\n```\n\n"
+        f"## 거시 지표 (종목 점수에는 안 들어갑니다 · context 섹션에서만 쓰세요)\n"
+        f"```json\n{json.dumps(macro_labelled, ensure_ascii=False, indent=2)}\n```\n\n"
         f"## 가격·이동평균\n```json\n{json.dumps(price, ensure_ascii=False)}\n```\n\n"
         f"## 쓸 수 있는 evidence ID (이 목록 밖은 금지)\n"
         + "\n".join(f"- {i}" for i in allowed)
@@ -160,30 +219,6 @@ def mock_opinion(score):
 
 
 # ---------------------------------------------------------------- 실제 호출
-def load_dotenv(path=None):
-    """프로젝트 루트의 .env 를 os.environ 에 채웁니다.
-
-    python-dotenv 를 안 쓰는 이유: 키 하나 읽자고 의존성을 늘릴 이유가 없습니다.
-    이미 설정된 환경변수가 이깁니다 (.env 가 셸 설정을 덮으면 디버깅이 괴로워집니다).
-    """
-    path = pathlib.Path(path or pathlib.Path(__file__).resolve().parent.parent / ".env")
-    if not path.exists():
-        return {}
-    loaded = {}
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, val = line.removeprefix("export ").split("=", 1)
-        key, val = key.strip(), val.strip().strip('"').strip("'")
-        loaded[key] = val
-        os.environ.setdefault(key, val)
-    return loaded
-
-
-load_dotenv()
-
-
 def has_key():
     """실제 키가 있는지. .env.example 의 플레이스홀더는 키가 아닙니다.
 

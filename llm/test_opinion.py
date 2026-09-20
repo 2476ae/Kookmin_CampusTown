@@ -1,7 +1,7 @@
 """의견 생성 + API 자체 검사. `python llm/test_opinion.py`
 
-API 키 없이 검사할 수 있는 것만 봅니다. 실제 LLM 호출 경로는 키가 생긴 뒤에
-누군가 한 번 돌려봐야 합니다 — 아직 아무도 안 돌려봤습니다.
+이 묶음은 항상 목 모드로 돕니다 — 키가 있어도 실제 API를 치지 않습니다 (돈이 듭니다).
+실제 호출은 2026-09-20 에 gpt-5.6-luna 로 확인했습니다: python llm/opinion.py 35010
 
 여기서 제일 중요한 건 sanitize 입니다. LLM이 없는 근거를 지어내도
 화면까지 가면 안 됩니다. 초보자는 그게 근거 없는 줄 모릅니다.
@@ -82,6 +82,21 @@ def _():
     for i in O.collect_evidence_ids(score):
         assert f"- {i}" in prompt, f"{i} 가 허용 목록에 없습니다"
     assert "바꾸지 마세요" in prompt, "점수를 바꾸지 말라는 지시가 빠졌습니다"
+
+
+@check("프롬프트 — 거시 지표도 허용 ID 목록에 들어갑니다")
+def _():
+    # 안 넣으면 모델이 "목록 밖은 금지" 규칙을 지키느라 거시를 아예 못 씁니다.
+    # 실제로 그래서 context 섹션이 종목 지표를 되풀이했습니다.
+    macro = {"FEDFUNDS": 4.25, "CPIAUCSL": 3.1}
+    prompt = O.build_prompt(E.score(NORMAL), macro, {})
+    for sid in macro:
+        assert f"- {O.macro_id(sid)}" in prompt, f"{O.macro_id(sid)} 가 허용 목록에 없습니다"
+    assert O.sanitize(
+        {"sections": [{"id": "c", "title": "c", "sentences": [
+            {"text": "금리", "evidence": [O.macro_id("FEDFUNDS")], "terms": []}]}],
+         "glossary": []},
+        E.score(NORMAL))["_dropped_evidence"] == [], "프롬프트는 허용했는데 sanitize 가 버립니다"
 
 
 @check("프롬프트 — 결측 축이 있으면 그 사실이 점수 JSON에 실려 갑니다")
@@ -256,4 +271,5 @@ if __name__ == "__main__":
     for name in passed:
         print(f"  ok  {name}")
     print(f"\n{len(passed)} passed")
-    print("\n  !!  실제 LLM 호출 경로는 아직 아무도 안 돌려봤습니다 (API 키 없음)")
+    print("\n  note  이 묶음은 항상 목 모드로 돕니다 — 키가 있어도 실제 API를 치지 않습니다.")
+    print("        실제 호출 확인:  python llm/opinion.py 35010")
