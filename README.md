@@ -240,6 +240,7 @@ nano 급까지 내리는 건 권하지 않습니다 — 제품 가치의 절반�
 
 ## 셋이 붙일 때
 
+**[docs/handoff-checklist.md](docs/handoff-checklist.md)** — 담당 ① 이 팀에 보내줄 것 (파일 2개)
 **[docs/integration.md](docs/integration.md)** — 10분짜리 통합 절차. 순서대로 치면 됩니다.
 
 ```bash

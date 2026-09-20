@@ -15,6 +15,9 @@
 ## 담당 ① — 데이터 레이어
 
 > DB 구축 중인 분. 이미 하던 것 이어서.
+>
+> ### 📦 [팀에 보내주실 것 → docs/handoff-checklist.md](docs/handoff-checklist.md)
+> 파일 2개(`stocks.db` 8MB + `delisted.csv`)면 됩니다. 3.2GB DuckDB 는 안 보내셔도 됩니다.
 
 **산출물** `etl/` 스크립트 + `data/stocks.db` (커밋 안 함)
 **의존** 없음. 지금 바로 시작.
