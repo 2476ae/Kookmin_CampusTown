@@ -1,0 +1,14 @@
+# 데이터 — companyfacts.zip 1.4GB, 추출 JSON, SQLite
+data/
+*.zip
+*.db
+*.sqlite3
+
+# API 키 (FRED, Anthropic)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
