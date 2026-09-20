@@ -1,0 +1,28 @@
+{
+  "ticker": "35003",
+  "name": "Fake 35003 Inc.",
+  "cik": "0000000004",
+  "asof": "2026-09-20",
+  "fiscal_year": 2025,
+  "score": null,
+  "rank_text": null,
+  "delisting": {
+    "delisted_date": "2025-03-14",
+    "status": "delisted"
+  },
+  "peer_group": null,
+  "score_basis": {
+    "axes_used": 0,
+    "axes_total": 4,
+    "reason": "상장폐지 종목 · 점수를 내지 않습니다"
+  },
+  "flags": [
+    {
+      "id": "flag.delisting",
+      "severity": "critical",
+      "text": "2025-03-14 상장폐지된 종목입니다"
+    }
+  ],
+  "axes": [],
+  "_note": "엔진 실제 출력 (상장폐지 · 점수 없음). 손으로 쓴 게 아니라 scoring/engine.py 가 뽑은 것입니다."
+}

@@ -4,18 +4,16 @@
   "cik": "0000320193",
   "asof": "2026-09-20",
   "fiscal_year": 2025,
-
   "score": 56,
   "rank_text": "동종업계 58개 중 26위 (상위 44%)",
-
   "peer_group": {
     "sic": "3571",
     "label": "Electronic Computers",
     "level": 4,
     "n": 58,
-    "fallback_note": null
+    "fallback_note": null,
+    "selected_by": "8개 지표 중 7개가 유효표본 30 이상 -> SIC 4자리 유지"
   },
-
   "flags": [
     {
       "id": "flag.delisting",
@@ -29,12 +27,13 @@
       "aligned_days": 112
     }
   ],
-
   "axes": [
     {
       "id": "profitability",
       "label": "수익성",
       "score": 90,
+      "status": "ok",
+      "reason": null,
       "indicators": [
         {
           "id": "profitability.operating_margin",
@@ -43,12 +42,27 @@
           "display": "31.2%",
           "unit": "ratio",
           "percentile": 88,
+          "status": "ok",
+          "reason": null,
           "direction": "higher_better",
           "peer_median": 0.121,
           "peer_median_display": "12.1%",
-          "peer_deciles": [2, 4, 6, 9, 8, 7, 6, 5, 6, 5],
-          "sources": ["annual_fact:0000320193:2025:operating_income",
-                      "annual_fact:0000320193:2025:revenue"]
+          "peer_deciles": [
+            2,
+            4,
+            6,
+            9,
+            8,
+            7,
+            6,
+            5,
+            6,
+            5
+          ],
+          "sources": [
+            "annual_fact:0000320193:2025:operating_income",
+            "annual_fact:0000320193:2025:revenue"
+          ]
         },
         {
           "id": "profitability.roe",
@@ -57,12 +71,27 @@
           "display": "147.2%",
           "unit": "ratio",
           "percentile": 91,
+          "status": "ok",
+          "reason": null,
           "direction": "higher_better",
           "peer_median": 0.168,
           "peer_median_display": "16.8%",
-          "peer_deciles": [3, 5, 7, 8, 9, 7, 6, 5, 4, 4],
-          "sources": ["annual_fact:0000320193:2025:net_income",
-                      "annual_fact:0000320193:2025:equity"]
+          "peer_deciles": [
+            3,
+            5,
+            7,
+            8,
+            9,
+            7,
+            6,
+            5,
+            4,
+            4
+          ],
+          "sources": [
+            "annual_fact:0000320193:2025:net_income",
+            "annual_fact:0000320193:2025:equity"
+          ]
         }
       ]
     },
@@ -70,6 +99,8 @@
       "id": "growth",
       "label": "성장성",
       "score": 58,
+      "status": "ok",
+      "reason": null,
       "indicators": [
         {
           "id": "growth.revenue_cagr3",
@@ -78,12 +109,27 @@
           "display": "6.1%",
           "unit": "ratio",
           "percentile": 54,
+          "status": "ok",
+          "reason": null,
           "direction": "higher_better",
           "peer_median": 0.052,
           "peer_median_display": "5.2%",
-          "peer_deciles": [4, 6, 7, 8, 8, 7, 6, 5, 4, 3],
-          "sources": ["annual_fact:0000320193:2022:revenue",
-                      "annual_fact:0000320193:2025:revenue"]
+          "peer_deciles": [
+            4,
+            6,
+            7,
+            8,
+            8,
+            7,
+            6,
+            5,
+            4,
+            3
+          ],
+          "sources": [
+            "annual_fact:0000320193:2022:revenue",
+            "annual_fact:0000320193:2025:revenue"
+          ]
         },
         {
           "id": "growth.operating_income_cagr3",
@@ -92,12 +138,27 @@
           "display": "7.4%",
           "unit": "ratio",
           "percentile": 61,
+          "status": "ok",
+          "reason": null,
           "direction": "higher_better",
           "peer_median": 0.041,
           "peer_median_display": "4.1%",
-          "peer_deciles": [5, 6, 7, 7, 8, 7, 6, 5, 4, 3],
-          "sources": ["annual_fact:0000320193:2022:operating_income",
-                      "annual_fact:0000320193:2025:operating_income"]
+          "peer_deciles": [
+            5,
+            6,
+            7,
+            7,
+            8,
+            7,
+            6,
+            5,
+            4,
+            3
+          ],
+          "sources": [
+            "annual_fact:0000320193:2022:operating_income",
+            "annual_fact:0000320193:2025:operating_income"
+          ]
         }
       ]
     },
@@ -105,6 +166,8 @@
       "id": "stability",
       "label": "안정성",
       "score": 60,
+      "status": "ok",
+      "reason": null,
       "indicators": [
         {
           "id": "stability.debt_to_equity",
@@ -113,12 +176,27 @@
           "display": "412%",
           "unit": "ratio",
           "percentile": 41,
+          "status": "ok",
+          "reason": null,
           "direction": "lower_better",
           "peer_median": 1.18,
           "peer_median_display": "118%",
-          "peer_deciles": [6, 8, 9, 8, 7, 6, 5, 4, 3, 2],
-          "sources": ["annual_fact:0000320193:2025:liabilities",
-                      "annual_fact:0000320193:2025:equity"]
+          "peer_deciles": [
+            6,
+            8,
+            9,
+            8,
+            7,
+            6,
+            5,
+            4,
+            3,
+            2
+          ],
+          "sources": [
+            "annual_fact:0000320193:2025:liabilities",
+            "annual_fact:0000320193:2025:equity"
+          ]
         },
         {
           "id": "stability.cashflow_quality",
@@ -127,12 +205,27 @@
           "display": "1.24배",
           "unit": "multiple",
           "percentile": 79,
+          "status": "ok",
+          "reason": null,
           "direction": "higher_better",
           "peer_median": 1.02,
           "peer_median_display": "1.02배",
-          "peer_deciles": [3, 5, 8, 10, 9, 7, 6, 4, 3, 3],
-          "sources": ["annual_fact:0000320193:2025:operating_cashflow",
-                      "annual_fact:0000320193:2025:net_income"]
+          "peer_deciles": [
+            3,
+            5,
+            8,
+            10,
+            9,
+            7,
+            6,
+            4,
+            3,
+            3
+          ],
+          "sources": [
+            "annual_fact:0000320193:2025:operating_cashflow",
+            "annual_fact:0000320193:2025:net_income"
+          ]
         }
       ]
     },
@@ -140,6 +233,8 @@
       "id": "valuation",
       "label": "밸류에이션",
       "score": 17,
+      "status": "ok",
+      "reason": null,
       "indicators": [
         {
           "id": "valuation.per",
@@ -148,12 +243,27 @@
           "display": "34.8배",
           "unit": "multiple",
           "percentile": 22,
+          "status": "ok",
+          "reason": null,
           "direction": "lower_better",
           "peer_median": 19.4,
           "peer_median_display": "19.4배",
-          "peer_deciles": [7, 9, 8, 7, 6, 5, 5, 4, 4, 3],
-          "sources": ["price_snapshot:AAPL:2026-09-20:market_cap",
-                      "annual_fact:0000320193:2025:net_income"]
+          "peer_deciles": [
+            7,
+            9,
+            8,
+            7,
+            6,
+            5,
+            5,
+            4,
+            4,
+            3
+          ],
+          "sources": [
+            "price_snapshot:AAPL:2026-09-20:market_cap",
+            "annual_fact:0000320193:2025:net_income"
+          ]
         },
         {
           "id": "valuation.pbr",
@@ -162,14 +272,39 @@
           "display": "51.2배",
           "unit": "multiple",
           "percentile": 12,
+          "status": "ok",
+          "reason": null,
           "direction": "lower_better",
           "peer_median": 3.1,
           "peer_median_display": "3.1배",
-          "peer_deciles": [8, 10, 9, 7, 6, 5, 4, 3, 3, 3],
-          "sources": ["price_snapshot:AAPL:2026-09-20:market_cap",
-                      "annual_fact:0000320193:2025:equity"]
+          "peer_deciles": [
+            8,
+            10,
+            9,
+            7,
+            6,
+            5,
+            4,
+            3,
+            3,
+            3
+          ],
+          "sources": [
+            "price_snapshot:AAPL:2026-09-20:market_cap",
+            "annual_fact:0000320193:2025:equity"
+          ]
         }
       ]
     }
-  ]
+  ],
+  "score_basis": {
+    "axes_used": 4,
+    "axes_total": 4,
+    "indicators_used": 8,
+    "indicators_total": 8
+  },
+  "delisting": {
+    "delisted_date": null,
+    "status": "listed"
+  }
 }

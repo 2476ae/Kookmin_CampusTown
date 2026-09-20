@@ -1,0 +1,276 @@
+{
+  "ticker": "35000",
+  "name": "Fake 35000 Inc.",
+  "cik": "0000000001",
+  "asof": "2026-09-20",
+  "fiscal_year": 2025,
+  "score": 86,
+  "rank_text": "동종업계 56개 중 8위 (상위 14%)",
+  "delisting": {
+    "delisted_date": null,
+    "status": "listed"
+  },
+  "peer_group": {
+    "sic": "3571",
+    "label": "Electronic Computers",
+    "level": 4,
+    "n": 56,
+    "selected_by": "8개 지표 중 8개가 유효표본 30 이상"
+  },
+  "score_basis": {
+    "axes_used": 3,
+    "axes_total": 4,
+    "indicators_used": 6,
+    "indicators_total": 8
+  },
+  "flags": [],
+  "axes": [
+    {
+      "id": "profitability",
+      "label": "수익성",
+      "score": 86,
+      "status": "ok",
+      "reason": null,
+      "indicators": [
+        {
+          "id": "profitability.operating_margin",
+          "label": "영업이익률",
+          "unit": "ratio",
+          "direction": "higher_better",
+          "sources": [
+            "annual_fact:0000000001:2025:operating_income",
+            "annual_fact:0000000001:2025:revenue"
+          ],
+          "value": 0.2545,
+          "display": "25.4%",
+          "percentile": 91,
+          "status": "ok",
+          "reason": null,
+          "peer_median": 0.1109,
+          "peer_median_display": "11.1%",
+          "peer_deciles": [
+            1,
+            0,
+            4,
+            4,
+            12,
+            16,
+            9,
+            5,
+            4,
+            1
+          ]
+        },
+        {
+          "id": "profitability.roe",
+          "label": "ROE",
+          "unit": "ratio",
+          "direction": "higher_better",
+          "sources": [
+            "annual_fact:0000000001:2025:net_income",
+            "annual_fact:0000000001:2025:equity"
+          ],
+          "value": 0.2176,
+          "display": "21.8%",
+          "percentile": 80,
+          "status": "ok",
+          "reason": null,
+          "peer_median": 0.1082,
+          "peer_median_display": "10.8%",
+          "peer_deciles": [
+            1,
+            2,
+            4,
+            15,
+            14,
+            7,
+            6,
+            4,
+            0,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "growth",
+      "label": "성장성",
+      "score": null,
+      "status": "insufficient_data",
+      "reason": "지표 절반 이상을 계산할 수 없습니다",
+      "indicators": [
+        {
+          "id": "growth.revenue_cagr3",
+          "label": "매출 3년 CAGR",
+          "unit": "ratio",
+          "direction": "higher_better",
+          "sources": [
+            "annual_fact:0000000001:2022:revenue",
+            "annual_fact:0000000001:2025:revenue"
+          ],
+          "value": null,
+          "display": null,
+          "percentile": null,
+          "peer_median": null,
+          "peer_median_display": null,
+          "peer_deciles": null,
+          "status": "insufficient_data",
+          "reason": "이 종목의 데이터가 부족해 계산할 수 없습니다"
+        },
+        {
+          "id": "growth.operating_income_cagr3",
+          "label": "영업이익 3년 CAGR",
+          "unit": "ratio",
+          "direction": "higher_better",
+          "sources": [
+            "annual_fact:0000000001:2022:operating_income",
+            "annual_fact:0000000001:2025:operating_income"
+          ],
+          "value": null,
+          "display": null,
+          "percentile": null,
+          "peer_median": null,
+          "peer_median_display": null,
+          "peer_deciles": null,
+          "status": "insufficient_data",
+          "reason": "이 종목의 데이터가 부족해 계산할 수 없습니다"
+        }
+      ]
+    },
+    {
+      "id": "stability",
+      "label": "안정성",
+      "score": 77,
+      "status": "ok",
+      "reason": null,
+      "indicators": [
+        {
+          "id": "stability.debt_to_equity",
+          "label": "부채비율",
+          "unit": "ratio",
+          "direction": "lower_better",
+          "sources": [
+            "annual_fact:0000000001:2025:liabilities",
+            "annual_fact:0000000001:2025:equity"
+          ],
+          "value": 2.0937,
+          "display": "209.4%",
+          "percentile": 60,
+          "status": "ok",
+          "reason": null,
+          "peer_median": 2.3268,
+          "peer_median_display": "232.7%",
+          "peer_deciles": [
+            6,
+            3,
+            4,
+            7,
+            4,
+            6,
+            6,
+            7,
+            5,
+            7
+          ]
+        },
+        {
+          "id": "stability.cashflow_quality",
+          "label": "영업현금흐름 / 순이익",
+          "unit": "multiple",
+          "direction": "higher_better",
+          "sources": [
+            "annual_fact:0000000001:2025:operating_cashflow",
+            "annual_fact:0000000001:2025:net_income"
+          ],
+          "value": 1.5694,
+          "display": "1.6배",
+          "percentile": 94,
+          "status": "ok",
+          "reason": null,
+          "peer_median": 1.1685,
+          "peer_median_display": "1.2배",
+          "peer_deciles": [
+            6,
+            6,
+            5,
+            4,
+            5,
+            5,
+            7,
+            4,
+            4,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "valuation",
+      "label": "밸류에이션",
+      "score": 95,
+      "status": "ok",
+      "reason": null,
+      "indicators": [
+        {
+          "id": "valuation.per",
+          "label": "PER",
+          "unit": "multiple",
+          "direction": "lower_better",
+          "sources": [
+            "price_snapshot:35000:2026-09-20:market_cap",
+            "annual_fact:0000000001:2025:net_income"
+          ],
+          "value": 30.1578,
+          "display": "30.2배",
+          "percentile": 96,
+          "status": "ok",
+          "reason": null,
+          "peer_median": 197.8657,
+          "peer_median_display": "197.9배",
+          "peer_deciles": [
+            46,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "id": "valuation.pbr",
+          "label": "PBR",
+          "unit": "multiple",
+          "direction": "lower_better",
+          "sources": [
+            "price_snapshot:35000:2026-09-20:market_cap",
+            "annual_fact:0000000001:2025:equity"
+          ],
+          "value": 6.5615,
+          "display": "6.6배",
+          "percentile": 94,
+          "status": "ok",
+          "reason": null,
+          "peer_median": 21.671,
+          "peer_median_display": "21.7배",
+          "peer_deciles": [
+            7,
+            8,
+            8,
+            9,
+            10,
+            3,
+            2,
+            2,
+            1,
+            4
+          ]
+        }
+      ]
+    }
+  ],
+  "_note": "엔진 실제 출력 (신규 상장 · 성장성 축 결측). 손으로 쓴 게 아니라 scoring/engine.py 가 뽑은 것입니다."
+}

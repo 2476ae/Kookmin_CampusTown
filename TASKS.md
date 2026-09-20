@@ -76,6 +76,25 @@ SELECT value FROM annual_fact WHERE cik='0000021344' AND metric='liabilities'; -
 5. **LLM tool calling → `opinion.json`** — 문장마다 `evidence` ID 부착. 계약의 ID 목록 밖은 못 쓰게 프롬프트에 박기
 6. **`GET /api/opinion?ticker=AAPL`** — 두 JSON을 합쳐서 반환
 
+### 진행 상황 (2026-09-20)
+
+1~4번 완료. `python scoring/test_engine.py` 로 16개 검사 통과.
+
+| 파일 | 내용 |
+|---|---|
+| `scoring/fake_db.py` | 230종목. 적자·자본잠식·신규상장·시총없음·상폐·폐지예정·표본부족 업종을 일부러 배치 |
+| `scoring/engine.py` | 지표 8개 · 백분위 · SIC 폴백 사다리 · S5/S6 처리 |
+| `scoring/test_engine.py` | 프레임워크 없는 assert 검사 16개 |
+
+**남은 것: 5번 LLM 오케스트레이터, 6번 API 엔드포인트.**
+
+구현하면서 계약에 실제로 추가된 것 (담당 ③는 다시 받아가세요):
+- `fiscal_year` — 재무가 몇 년도 기준인지
+- 지표별 `sources` — 드릴다운이 원본 DB 행까지 가는 길
+- `status` / `reason` / `score_basis` — 결측 표현 (S5)
+- `delisting.status` — `listed` / `delisting_soon` / `delisted` (S6)
+- `contracts/score.insufficient.example.json`, `contracts/score.delisted.example.json` — 망가진 케이스 실제 출력
+
 ### 완료 기준
 
 - **결정성**: 같은 입력 두 번 → 점수 완전히 동일
