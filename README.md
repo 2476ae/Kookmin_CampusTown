@@ -209,9 +209,12 @@ GET /api/opinion?ticker=35010   SSE · score -> status -> delta -> opinion -> do
 API 키 없이도 전부 돌아갑니다 (의견은 목 데이터). 실제 LLM을 쓰려면:
 
 ```bash
-export OPENAI_API_KEY=...       # Windows PowerShell: $env:OPENAI_API_KEY="..."
-pip install openai
+cp .env.example .env               # 그 다음 .env 안에 키를 채워 넣으세요
+pip install -U -r requirements.txt # -U 필수: 구버전 openai가 있으면 안 올라갑니다
 ```
+
+`.env` 는 `.gitignore` 에 있습니다. 환경변수로 넣어도 되고(그쪽이 우선합니다),
+`.env` 가 편하면 그걸 쓰세요.
 
 ## 같이 만드는 법
 

@@ -160,8 +160,53 @@ def mock_opinion(score):
 
 
 # ---------------------------------------------------------------- 실제 호출
+def load_dotenv(path=None):
+    """프로젝트 루트의 .env 를 os.environ 에 채웁니다.
+
+    python-dotenv 를 안 쓰는 이유: 키 하나 읽자고 의존성을 늘릴 이유가 없습니다.
+    이미 설정된 환경변수가 이깁니다 (.env 가 셸 설정을 덮으면 디버깅이 괴로워집니다).
+    """
+    path = pathlib.Path(path or pathlib.Path(__file__).resolve().parent.parent / ".env")
+    if not path.exists():
+        return {}
+    loaded = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, val = line.removeprefix("export ").split("=", 1)
+        key, val = key.strip(), val.strip().strip('"').strip("'")
+        loaded[key] = val
+        os.environ.setdefault(key, val)
+    return loaded
+
+
+load_dotenv()
+
+
 def has_key():
     return bool(os.environ.get(API_KEY_ENV))
+
+
+def require_sdk():
+    """openai >= 1.0 을 확인합니다.
+
+    0.28 같은 구버전이 깔려 있으면 `pip install openai` 는 "already satisfied" 라며
+    아무것도 안 하고, 나중에 ImportError 만 납니다. 여기서 먼저 잡습니다.
+    """
+    import openai
+
+    if not hasattr(openai, "OpenAI"):
+        import importlib.metadata as md
+        try:
+            found = md.version("openai")
+        except Exception:
+            found = "?"
+        raise RuntimeError(
+            f"openai {found} 은 너무 낡았습니다. Responses API 에는 1.0 이상이 필요합니다.\n"
+            f"  pip install -U openai\n"
+            f"  (-U 를 빼면 '이미 설치됨' 이라며 아무것도 하지 않습니다)")
+    return openai.OpenAI
 
 
 def generate(score, macro, price, on_progress=None):
@@ -176,9 +221,7 @@ def generate(score, macro, price, on_progress=None):
     if not has_key():
         return mock_opinion(score)
 
-    from openai import OpenAI
-
-    client = OpenAI()
+    client = require_sdk()()
     text, refusal = [], []
     stream = client.responses.create(
         model=MODEL,

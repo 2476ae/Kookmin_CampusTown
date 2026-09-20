@@ -126,12 +126,78 @@ def _():
     walk(O.OPINION_SCHEMA)
 
 
+@check("검사가 환경을 오염시키지 않습니다")
+def _():
+    import os
+    assert not os.environ.get(O.API_KEY_ENV), (
+        f"{O.API_KEY_ENV} 가 검사 중에 설정됐습니다 — 뒤의 검사가 실제 API를 칩니다")
+
+
+@check("openai 패키지가 1.0 이상인지 확인하고 친절히 실패합니다")
+def _():
+    import openai
+    if not hasattr(openai, "OpenAI"):
+        try:
+            O.require_sdk()
+        except RuntimeError as e:
+            assert "pip install -U openai" in str(e), str(e)
+        else:
+            assert False, "구버전 SDK인데 통과했습니다"
+    else:
+        O.require_sdk()
+
+
 @check("제공자 설정이 한 군데에 모여 있습니다 (교체 비용)")
 def _():
     assert O.PROVIDER == "openai" and O.API_KEY_ENV == "OPENAI_API_KEY"
     src = (ROOT / "llm" / "opinion.py").read_text(encoding="utf-8")
     assert "anthropic" not in src.lower(), "Anthropic 잔재가 남아 있습니다"
     assert "claude" not in src.lower(), "Anthropic 잔재가 남아 있습니다"
+
+
+# ----------------------------------------------------------------- .env
+@check(".env — KEY=value, export 접두사, 따옴표, 주석을 처리합니다")
+def _():
+    import os
+    import tempfile
+
+    body = '''# 주석
+
+DOTENV_A="value-a"
+export SOME_OTHER='quoted'
+MALFORMED_LINE
+'''
+    with tempfile.TemporaryDirectory() as d:
+        f = pathlib.Path(d) / ".env"
+        f.write_text(body, encoding="utf-8")
+        loaded = O.load_dotenv(f)
+    assert loaded == {"DOTENV_A": "value-a", "SOME_OTHER": "quoted"}, loaded
+    assert os.environ.get("SOME_OTHER") == "quoted"
+    # load_dotenv 는 진짜 os.environ 을 건드립니다. 반드시 되돌리세요 —
+    # 픽스처에 OPENAI_API_KEY 를 넣었다가 뒤의 검사가 실제 API 경로를 타버렸습니다.
+    for k in ("DOTENV_A", "SOME_OTHER"):
+        os.environ.pop(k, None)
+
+
+@check(".env — 이미 설정된 환경변수가 .env 를 이깁니다")
+def _():
+    import os
+    import tempfile
+
+    os.environ["PRESET_VAR"] = "from-shell"
+    try:
+        with tempfile.TemporaryDirectory() as d:
+            f = pathlib.Path(d) / ".env"
+            f.write_text("PRESET_VAR=from-dotenv\n", encoding="utf-8")
+            O.load_dotenv(f)
+        assert os.environ["PRESET_VAR"] == "from-shell", ".env 가 셸 설정을 덮었습니다"
+    finally:
+        del os.environ["PRESET_VAR"]
+
+
+@check(".env — 파일이 없어도 죽지 않습니다")
+def _():
+    assert O.load_dotenv(pathlib.Path("nope-does-not-exist")) == {}
 
 
 # --------------------------------------------------------------- API
