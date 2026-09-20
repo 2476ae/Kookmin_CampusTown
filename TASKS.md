@@ -133,6 +133,39 @@ hint: Use -f if you really want to add them.
 (Release 첨부는 2GB 까지 되고 git 히스토리를 더럽히지 않습니다).
 받은 사람은 `data/stocks.db` 에 놓기만 하면 됩니다.
 
+### DuckDB 를 쓰고 있다면 — DB 를 바꾸지 마세요
+
+분석용 저장소와 서빙용 저장소는 역할이 다릅니다.
+
+| | 분석용 (DuckDB) | 서빙용 (`data/stocks.db`) |
+|---|---|---|
+| 하는 일 | 78M행 스캔, 지표 실험 | 메모리에 올려 0.2ms 응답 |
+| 크기 | GB 단위 | 수십 MB |
+| 의존성 | duckdb | 없음 (stdlib) |
+
+엔진은 DuckDB 의 강점을 하나도 안 씁니다 — 시작할 때 한 번 읽고 끝입니다.
+필요한 건 **내보내기 한 단계**뿐입니다.
+
+```bash
+python etl/export_to_contract.py --from-zip 2026q1.zip --out data/stocks.db
+python scoring/check_db.py data/stocks.db
+```
+
+`etl/export_to_contract.py` 는 참고 구현입니다. 실제 SEC 2026q1 로 돌려서
+4,244종목 / 68,115행이 나오는 것까지 확인했습니다. DuckDB 를 쓴다면
+`_read_zip()` 을 SELECT 로 바꾸면 됩니다 — 나머지는 그대로입니다.
+
+**변환에서 조용히 틀리는 세 곳** (전부 실데이터로 확인):
+
+- **`qtrs`** — `0` 은 시점 값(자산·부채·자본), `4` 는 연간 기간 값(매출·이익·현금흐름).
+  헷갈리면 분기 숫자가 연간으로 들어갑니다. 에러가 안 나서 제일 위험합니다.
+- **`segments` / `coreg`** — 비어 있는 행만. 아니면 사업부문별 값이 섞입니다.
+- **`cik` 패딩** — SEC 원본은 `'6955'`, 계약은 `'0000006955'`.
+  안 맞추면 계약의 `sources` 필드가 깨져 좌측 드릴다운이 원본을 못 찾습니다.
+
+그리고 **`liabilities` 폴백은 예외가 아니라 기본**입니다. 2026q1 실측으로
+4,244개 중 **1,130개(27%)** 가 부채 태그 없이 `assets - equity` 폴백이 필요했습니다.
+
 ### 넘기기 전에 / 받은 뒤에 반드시
 
 ```bash
