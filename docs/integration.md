@@ -32,23 +32,28 @@ python scoring/check_db.py data/stocks.db
 
 ### C. DB 가 있는 컴퓨터에서 통째로 돌린다  ← 지금 이 방법
 
-파일을 옮기지 않습니다. 저장소를 그 컴퓨터에 클론하고 거기서 띄웁니다.
+파일을 옮기지 않습니다. 클론하고 `bootstrap.py` 한 번이면 됩니다.
 
 ```bash
 git clone https://github.com/2476ae/Kookmin_CampusTown.git
 cd Kookmin_CampusTown
-pip install -U -r requirements.txt        # openai, requests
-pip install duckdb                        # DuckDB 에서 변환할 때만
+python bootstrap.py
 ```
 
-`.env` 를 만듭니다 (`.env.example` 복사):
+의존성 설치 · `.env` 생성 · DuckDB 변환 · 거시 지표 · 샘플 가격 · 검사를
+순서대로 합니다. 대화형이면 `.env` 두 줄을 물어보고, 아니면 무엇이 비었는지
+알려주고 그만큼만 기능을 줄여서 진행합니다. 여러 번 돌려도 안전합니다.
 
-```
-OPENAI_API_KEY=sk-...
-SEC_CONTACT_EMAIL=you@example.com
+원본을 못 찾으면 알려줍니다. 경로를 직접 주려면:
+
+```bash
+python bootstrap.py --duckdb <그컴퓨터의.duckdb>
+python bootstrap.py --zip 2026q1.zip 2025q4.zip
+python bootstrap.py --duckdb sec.duckdb --sub-table my_sub --num-table my_num
+python bootstrap.py --duckdb sec.duckdb --delisted delisted.csv --real-prices
 ```
 
-**DuckDB 에서 바로 변환합니다.** 테이블 이름이 `sub` / `num` 이면 그대로:
+아래는 bootstrap 이 내부에서 하는 일입니다. 따로 돌릴 수도 있습니다.
 
 ```bash
 python etl/export_to_contract.py --from-duckdb <그컴퓨터의.duckdb> --out data/stocks.db

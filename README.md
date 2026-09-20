@@ -193,6 +193,26 @@ SIC 2자리 → ≥ 30 ? 사용
 **문장마다 근거 ID를 붙이는 것**이 이 설계의 전부입니다.
 없으면 좌측 사이드바는 숫자 덤프가 되고, 있으면 "이 문장 왜?" → 클릭 → 해당 수치로 점프가 됩니다.
 
+## 처음 받았다면 — 한 번만
+
+```bash
+git clone https://github.com/2476ae/Kookmin_CampusTown.git
+cd Kookmin_CampusTown
+python bootstrap.py                     # 원본을 알아서 찾아 DB까지 만듭니다
+python api/server.py                    # http://localhost:8000
+```
+
+`bootstrap.py` 가 의존성 설치 · `.env` 생성 · DB 변환 · 거시 지표 · 검사까지 합니다.
+원본이 DuckDB 든 SEC 분기 zip 이든 알아서 찾고, 못 찾으면 어디서 받는지 알려줍니다.
+여러 번 돌려도 안전합니다.
+
+**사람 손이 필요한 건 `.env` 두 줄뿐입니다.**
+
+| | 없으면 |
+|---|---|
+| `OPENAI_API_KEY` | 화면·점수는 다 돌아갑니다. 의견 글만 목 데이터 |
+| `SEC_CONTACT_EMAIL` | 티커 자리에 CIK 가 뜹니다 (SEC 가 연락처를 요구합니다) |
+
 ## 돌려보기
 
 ```bash
