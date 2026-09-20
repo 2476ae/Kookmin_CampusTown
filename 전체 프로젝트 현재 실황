@@ -1,0 +1,95 @@
+담당 ① 제안입니다.
+
+## 제안
+종목 일봉 차트는 Yahoo chart API(yfinance) 대신 TradingView 무료 Advanced Chart 위젯(iframe)으로 표시합니다.
+https://www.tradingview.com/widget-docs/widgets/charts/advanced-chart/
+
+## 이유
+- yfinance 문서가 "개인용"이라고 명시합니다. 외부 사용자에게 화면으로 보여주는 서비스는 개인용이 아닙니다. 사용자 요청 시에만 호출해도 마찬가지입니다.
+- 위젯은 데이터 라이선스를 TradingView가 처리하고, 백엔드 호출과 rate limit 걱정이 없습니다. 조건은 TradingView 로고 표시입니다(제거는 별도 문의).
+
+## 영향
+- 담당 ③: 차트 영역에 위젯을 임베드합니다. 심볼은 company.exchange + ticker (예: NASDAQ:AAPL)로 만듭니다.
+- 담당 ①: price_snapshot의 ma20/ma60/ma110은 flag.ma_late 용도만 남습니다.
+
+## 남은 문제 (이 제안으로 해결되지 않음)
+- 점수용 종가와 market_cap 소스는 여전히 필요합니다. 업종 백분위(PER/PBR)에 전 종목 가격이 필요하고, Yahoo chart API는 market_cap을 주지 않습니다(AAPL로 확인).
+- TradingView 위젯의 미국 주식 데이터 지연 여부와 세부 약관은 확인하지 못했습니다. 채택 전 약관 원문을 확인해야 합니다.
+
+## 확인 요청
+담당 ②③ 의견 부탁드립니다. 합의되면 README·TASKS를 그에 맞춰 수정하겠습니다.
+# SEC 데이터 파이프라인 — 진행 현황과 남은 작업
+
+기준일 2026-09-20. 데이터 파일(DuckDB 3.2GB, CSV/JSON 캐시)은 저장소 규칙대로 커밋하지 않았습니다.
+
+## 완료된 것
+
+### 1. SEC 분기별 벌크 재무데이터 적재
+- SEC `Financial Statement Data Sets` 23개 분기(2020q4 ~ 2026q2)를 DuckDB에 적재. 2026q3은 아직 미공개.
+- `sub`(제출 메타) 161,544행, `num`(재무수치) 78,612,417행. 파일 크기 3,254MB.
+- 전 컬럼 VARCHAR로 원본 보존(분기마다 컬럼이 조금씩 달라 타입 자동추정이 깨질 수 있음). 숫자 계산은 조회 시 CAST.
+- 정합성: `value` 컬럼 78.6M행 중 숫자 변환 실패 0건. AAPL 스팟체크 통과.
+- 연결재무제표 수치만 쓰려면 `segments IS NULL AND coreg IS NULL` 조건이 필요. 사업부문별 값이 같은 태그에 섞여 있음.
+- `sub.cik`는 앞자리 0 패딩이 없는 문자열(`'320193'`). 다른 소스와 조인할 때 포맷을 맞춰야 함.
+
+### 2. 티커·거래소 매핑
+- SEC `company_tickers_exchange.json` → `ticker_exchange` 테이블 10,438행. Nasdaq 4,370 / NYSE 3,299 / OTC 2,506 / CBOE 44 / 미상 219.
+- 최근 분기 제출사 6,179개 중 5,657개(91.6%)가 매칭. 나머지는 채권 발행체·신탁·펀드 등.
+- 이 파일은 현재 시점 스냅샷이라 이미 상장폐지된 회사는 없음.
+
+### 3. 재무지표 4종 (NASDAQ 10-K 13,021건)
+| 지표 | 계산 성공률 | 비고 |
+|---|---|---|
+| Altman Z'' | 65.2% | 비제조업 포함 범용판, 장부가 자기자본. 금융업(SIC 6000번대)은 제외 |
+| Sloan Accruals | 97.2% | (순이익 − 영업현금흐름) / 평균총자산 |
+| Piotroski F | 100% (평균 7.1/9 기준 계산) | 결측 기준은 0점이 아니라 제외하고 계산기준 수를 함께 기록 |
+| Beneish M | 4.6% | 8개 변수가 전부 있어야 계산됨. 판관비·장기부채 태그 커버리지가 31% 안팎이라 낮음 |
+
+- 태그가 회사마다 달라서 개념별 우선순위 태그 목록(fallback)으로 처리.
+- 같은 10-K 안의 당기·전기 비교수치를 사용해 재작성 이슈를 피함.
+
+### 4. NASDAQ 상장폐지 종목 목록 (최근 6년)
+- Form 25-NSE는 거래소가 제출하므로 NASDAQ 자체 제출이력(CIK 1354457)에서 2,441건을 수집. 각 건의 XML에서 발행사·증권종류를 파싱.
+- 증권설명에 보통주가 들어간 것만 추리고 발행사 CIK로 중복 제거 → **1,509개**.
+  - SPAC 추정 406개(증권설명에 Unit 포함 또는 사명 패턴). SPAC은 제외하기로 확정 → **1,103개**.
+  - SPAC 판별은 추정이며, 이름·설명에 패턴이 없는 SPAC은 일반기업 쪽에 섞여 있을 수 있음.
+- 채권·우선주·워런트·ETF 상장폐지는 증권종류 필드로 자동 제외.
+- 이미 상장폐지된 회사의 과거 재무데이터는 1번의 벌크 데이터에 이미 들어 있음(별도 다운로드 불필요).
+
+### 5. 상장폐지 사유 1차 라벨링 (SPAC 제외 1,103개)
+Form 25 제출일 전후 365일의 8-K 항목코드와 합병·공개매수 서류로 판정.
+| 라벨 | 종목 수 | 규칙 |
+|---|---|---|
+| acquired | 703 (63.7%) | 합병위임장·공개매수 서류 또는 8-K Item 5.01 |
+| bankruptcy | 152 (13.8%) | 8-K Item 1.03 |
+| listing_deficiency | 110 (10.0%) | 8-K Item 3.01(상장요건 미충족)만 있음 |
+| unknown | 103 (9.3%) | 위 신호 전무 |
+| acquired_weak | 35 (3.2%) | Item 2.01만 있음. 남을 사는 경우에도 쓰여서 인수로 단정하지 않음 |
+
+- 스팟체크: Bed Bath & Beyond → bankruptcy, Activision Blizzard → acquired. 실제와 일치.
+- 부실기업 학습에 쓸 수 있는 표본은 bankruptcy + listing_deficiency 262개(24%) 수준.
+- 이 262개를 `delisted_distress` 테이블(cik, name, form25_date, label, evidence, n_filings_in_window)로 저장. `cik`는 `sub.cik`와 같은 포맷(앞자리 0 없음)이라 바로 조인 가능. 262개 중 258개가 벌크 재무데이터(`sub`)에 제출 이력이 있고 255개는 10-K가 있음.
+
+## 앞으로 필요한 작업
+
+### 상장폐지 라벨링 마무리
+1. unknown 103개 + listing_deficiency 110개에 going-concern 전문검색("substantial doubt … going concern") 적용. SEC 전문검색 API 동작은 아직 확인 전.
+2. acquired_weak 35개는 개별 필링을 열어 확인.
+3. NYSE 상장폐지는 아직 수집하지 않음(NASDAQ만 수집). 범위를 넓힐지 결정 필요.
+
+### 상장폐지 패턴 → 위험 점수
+4. 상장폐지 종목의 폐지 직전 재무지표(Altman·Piotroski·Sloan 등) 분포를 잔존 종목과 비교해 부실 패턴 추출.
+5. 현재 NASDAQ 종목에 적용해 위험 점수 산출. 생존 편향과 표본 크기(부실 262개)를 검증 항목에 포함.
+
+### 미착수 데이터 모듈
+6. 3년 일봉 + MA20/60/110 차트 모듈. 아래 7·8번의 선행 조건.
+7. Peer Multiple Comparison (SIC 기반 동종업계 + 시가총액 필요).
+8. DCF (성장률은 최근 3~5년 매출성장 평균으로 자동 추정, 할인율은 CAPM). 주가·무위험수익률 필요.
+9. 거시경제: FRED + Alpha Vantage News & Sentiment.
+10. 검색 노출빈도: Google Custom Search API. 무료 한도가 하루 100회라 종목 수 대비 호출량 설계가 필요.
+
+### 통합
+11. 점수 축 구성 조율. 이 파이프라인은 5개 범주(거시·업종+재무·차트·검색노출·상장폐지 위험) 각 20%로 설계했는데, 저장소의 점수 엔진은 4축 × 지표 2개. 어느 쪽에 맞출지 팀 합의 필요.
+12. `contracts/db_schema.sql` 형식(company / annual_fact / price_snapshot / macro)으로 적재. 현재는 SEC 원본 형태(sub/num) 그대로여서 변환 단계가 필요.
+13. Beneish 커버리지 개선(판관비·장기부채 태그 fallback 확장).
+14. 일 단위 배치 갱신 + 서비스 계층. 저장소는 stdlib 서버로 구현돼 있어 초기 설계(FastAPI)와 맞출지 결정 필요.
