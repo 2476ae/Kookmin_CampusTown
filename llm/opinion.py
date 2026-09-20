@@ -185,7 +185,13 @@ load_dotenv()
 
 
 def has_key():
-    return bool(os.environ.get(API_KEY_ENV))
+    """실제 키가 있는지. .env.example 의 플레이스홀더는 키가 아닙니다.
+
+    'sk-...' 를 키로 받아들이면 목 모드로 안 떨어지고 인증 에러로 터집니다.
+    .env.example 만 복사하고 안 채운 사람이 반드시 생깁니다.
+    """
+    key = (os.environ.get(API_KEY_ENV) or "").strip()
+    return bool(key) and "..." not in key
 
 
 def require_sdk():

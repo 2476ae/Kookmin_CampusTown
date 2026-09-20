@@ -20,6 +20,12 @@ import fake_db          # noqa: E402
 import opinion as O     # noqa: E402
 from engine import Engine  # noqa: E402
 
+# 검사 묶음은 절대 실제 API를 치지 않습니다. 돈이 들고 네트워크를 탑니다.
+# opinion 을 import 하는 순간 .env 가 로드되므로, 진짜 키를 가진 사람이
+# 돌리면 API 검사가 실제 호출로 넘어갑니다. 여기서 끊습니다.
+import os  # noqa: E402
+os.environ.pop(O.API_KEY_ENV, None)
+
 DB = ROOT / "data" / "fake.db"
 if not DB.exists():
     fake_db.build(DB)
@@ -126,11 +132,27 @@ def _():
     walk(O.OPINION_SCHEMA)
 
 
-@check("검사가 환경을 오염시키지 않습니다")
+@check("검사 도중 실제 API 경로가 열리지 않습니다")
+def _():
+    # 픽스처가 키를 흘리거나 .env 가 로드돼도 여기서 잡힙니다.
+    assert O.has_key() is False, (
+        f"{O.API_KEY_ENV} 가 살아 있습니다 — 검사가 실제 API를 치고 돈을 씁니다")
+
+
+@check("has_key — .env.example 플레이스홀더를 키로 착각하지 않습니다")
 def _():
     import os
-    assert not os.environ.get(O.API_KEY_ENV), (
-        f"{O.API_KEY_ENV} 가 검사 중에 설정됐습니다 — 뒤의 검사가 실제 API를 칩니다")
+
+    example = (ROOT / ".env.example").read_text(encoding="utf-8")
+    placeholder = next(ln.split("=", 1)[1].strip() for ln in example.splitlines()
+                       if ln.startswith(O.API_KEY_ENV + "="))
+    for value, expected in ((placeholder, False), ("", False), ("   ", False),
+                            ("sk-proj-REALLOOKINGKEY123", True)):
+        os.environ[O.API_KEY_ENV] = value
+        try:
+            assert O.has_key() is expected, f"{value!r} -> {O.has_key()} (기대 {expected})"
+        finally:
+            del os.environ[O.API_KEY_ENV]
 
 
 @check("openai 패키지가 1.0 이상인지 확인하고 친절히 실패합니다")
